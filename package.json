@@ -1,0 +1,8 @@
+{
+  "name": "retired-in-a-field",
+  "version": "1.0.0",
+  "description": "Retired in a Field web game.",
+  "scripts": {
+    "start": "open retired_in_field.html"
+  }
+}

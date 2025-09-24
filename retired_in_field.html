@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Retired in a Field</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* CSS Variables for theming */
+        :root {
+            /* Light theme (default) */
+            --bg-gradient-start: #f9f9f9;
+            --bg-gradient-end: #f5f5f0;
+            --bg-primary: #ffffff;
+            --bg-secondary: #fafaf9;
+            --bg-tertiary: #f5f5f4;
+            --text-primary: #1c1917;
+            --text-secondary: #44403c;
+            --text-tertiary: #57534e;
+            --text-muted: #78716c;
+            --text-disabled: #a8a29e;
+            --border-primary: #e7e5e4;
+            --border-secondary: #d6d3d1;
+            --accent-primary: #059669;
+            --accent-secondary: #047857;
+            --accent-tertiary: #065f46;
+            --accent-light: #d1fae5;
+            --accent-bg: #f0fdf4;
+            --code-bg: #1c1917;
+            --code-text: #f5f5f4;
+            --inline-code-bg: #f5f5f4;
+            --inline-code-text: #dc2626;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 2px 4px rgba(5, 150, 105, 0.2);
+            --shadow-lg: 0 4px 8px rgba(5, 150, 105, 0.3);
+        }
+
+        /* Dark theme */
+        body.dark-theme {
+            --bg-gradient-start: #0a0a0a;
+            --bg-gradient-end: #1c1917;
+            --bg-primary: #1c1917;
+            --bg-secondary: #292524;
+            --bg-tertiary: #44403c;
+            --text-primary: #f5f5f4;
+            --text-secondary: #e7e5e4;
+            --text-tertiary: #d6d3d1;
+            --text-muted: #a8a29e;
+            --text-disabled: #78716c;
+            --border-primary: #44403c;
+            --border-secondary: #57534e;
+            --accent-primary: #10b981;
+            --accent-secondary: #059669;
+            --accent-tertiary: #34d399;
+            --accent-light: #064e3b;
+            --accent-bg: #022c22;
+            --code-bg: #000000;
+            --code-text: #f5f5f4;
+            --inline-code-bg: #292524;
+            --inline-code-text: #34d399;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 2px 4px rgba(16, 185, 129, 0.2);
+            --shadow-lg: 0 4px 8px rgba(16, 185, 129, 0.3);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(to bottom, var(--bg-gradient-start), var(--bg-gradient-end));
+            color: var(--text-tertiary);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+            line-height: 1.5;
+            transition: background 0.3s ease, color 0.3s ease;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+        
+        /* Full-screen game container for mobile */
+        #gameContainer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        #gameCanvas {
+            background-color: #8bc34a; /* Lighter field green */
+            display: block;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        
+        .screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-primary);
+            background-color: var(--bg-primary);
+            padding: 1rem;
+            text-align: center;
+            z-index: 10;
+        }
+        
+        #setupScreen {
+            display: flex;
+        }
+        
+        #gameOverScreen {
+            display: none;
+        }
+        
+        #endingScreen {
+            display: none;
+        }
+        
+        /* Preview container for setup screen */
+        #previewContainer {
+            width: 80%;
+            max-width: 400px;
+            height: 120px;
+            margin: 1rem 0;
+            position: relative;
+            background-color: #8bc34a; /* Field green */
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .preview-character {
+            position: absolute;
+            bottom: 10px;
+        }
+        
+        .preview-man {
+            left: 20%;
+            width: 24px;
+            height: 24px;
+        }
+        
+        .preview-cow {
+            right: 20%;
+            width: 32px;
+            height: 32px;
+        }
+        
+        .screen h1 {
+            font-size: 1.75rem;
+            margin-bottom: 1rem;
+            color: var(--accent-primary);
+            font-weight: 600;
+            width: 100%;
+        }
+        
+        .screen p {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            text-align: center;
+            max-width: 90%;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            width: 100%;
+        }
+        
+        input, button {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 1rem;
+            padding: 0.75rem 1rem;
+            margin: 0.5rem 0;
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            text-align: center;
+            min-height: 48px;
+            width: 100%;
+            max-width: 320px;
+        }
+
+        .btn {
+            background: var(--accent-primary);
+            color: white;
+            border: 1px solid var(--accent-primary);
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 200px;
+            box-shadow: var(--shadow-md);
+            font-size: 16px; /* Prevent iOS zoom */
+            padding: 1rem 1.5rem;
+        }
+        
+        .btn:hover {
+            background: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        
+        #cashAmount {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--accent-primary);
+            margin: 1.5rem 0;
+            text-align: center;
+            width: 100%;
+        }
+        
+        /* Mobile-specific adjustments */
+        @media (max-width: 768px) {
+            #previewContainer {
+                height: 100px;
+                margin: 0.75rem 0;
+            }
+            
+            .preview-man {
+                width: 20px;
+                height: 20px;
+                bottom: 8px;
+            }
+            
+            .preview-cow {
+                width: 26px;
+                height: 26px;
+                bottom: 8px;
+            }
+            
+            .screen h1 {
+                font-size: 1.5rem;
+                margin-bottom: 0.75rem;
+            }
+            
+            .screen p {
+                font-size: 14px;
+                margin-bottom: 0.75rem;
+            }
+            
+            .btn {
+                font-size: 16px;
+                padding: 12px 20px;
+                margin: 10px 0;
+                min-width: 160px;
+            }
+            
+            #cashAmount {
+                font-size: 20px;
+                margin: 20px 0;
+            }
+        }
+        
+        /* Extra small devices (phones, 320px and down) */
+        @media (max-width: 320px) {
+            #previewContainer {
+                height: 80px;
+                margin: 0.5rem 0;
+            }
+            
+            .preview-man {
+                width: 16px;
+                height: 16px;
+                bottom: 6px;
+            }
+            
+            .preview-cow {
+                width: 20px;
+                height: 20px;
+                bottom: 6px;
+            }
+            
+            .screen h1 {
+                font-size: 1.25rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .screen p {
+                font-size: 13px;
+                margin-bottom: 0.5rem;
+            }
+            
+            .btn {
+                font-size: 15px;
+                padding: 10px 16px;
+                margin: 8px 0;
+                min-width: 140px;
+            }
+            
+            #cashAmount {
+                font-size: 18px;
+                margin: 16px 0;
+            }
+        }
+        
+        /* Animation for screen transitions */
+        .screen.fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* Improved touch feedback */
+        .btn:active {
+            transform: translateY(1px);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        /* Scroll prevention */
+        body {
+            overscroll-behavior: none;
+        }
+        
+        /* Ensure no text selection on game elements */
+        #gameCanvas, .btn {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Safe area handling for modern mobile devices */
+        @supports (padding-top: env(safe-area-inset-top)) {
+            .screen {
+                padding-top: env(safe-area-inset-top);
+                padding-right: env(safe-area-inset-right);
+                padding-bottom: env(safe-area-inset-bottom);
+                padding-left: env(safe-area-inset-left);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        
+        <!-- Setup Screen -->
+        <div id="setupScreen" class="screen fade-in">
+            <h1>Retired in a Field</h1>
+            <p>Stretch those legs and get ready to outrun the cow.</p>
+            
+            <!-- Preview container with man and cow -->
+            <div id="previewContainer">
+                <!-- Man on the left -->
+                <div class="preview-character preview-man" id="previewMan"></div>
+                <!-- Cow on the right -->
+                <div class="preview-character preview-cow" id="previewCow"></div>
+            </div>
+            
+            <button id="startButton" class="btn">Start Game</button>
+        </div>
+        
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="screen">
+            <h1>Gotcha!</h1>
+            <p>The cow has caught you!</p>
+            <button id="continueButton" class="btn">Continue</button>
+        </div>
+        
+        <!-- Ending Screen -->
+        <div id="endingScreen" class="screen">
+            <h1>Game Complete</h1>
+            <p>Thank you for playing!</p>
+            <div id="cashAmount">That's my money now</div>
+            <button id="playAgainButton" class="btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const setupScreen = document.getElementById('setupScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const endingScreen = document.getElementById('endingScreen');
+        const startButton = document.getElementById('startButton');
+        const continueButton = document.getElementById('continueButton');
+        const playAgainButton = document.getElementById('playAgainButton');
+        
+        // Preview elements
+        const previewMan = document.getElementById('previewMan');
+        const previewCow = document.getElementById('previewCow');
+        
+        // Game state
+        let gameRunning = false;
+        
+        // Vibration state for man
+        let vibrationOffset = {x: 0, y: 0};
+        let vibrationIntensity = 2; // Increased from default 1 to 2 for stronger vibration
+        let vibrationPhase = 0;
+        
+        // Function to draw a simple pixel-style man on preview
+        function drawManPreview() {
+            // Create canvas element for man
+            const manCanvas = document.createElement('canvas');
+            manCanvas.width = 24;
+            manCanvas.height = 24;
+            const manCtx = manCanvas.getContext('2d');
+            
+            // Body
+            manCtx.fillStyle = '#4169E1'; // Royal blue
+            manCtx.fillRect(0, 4, 24, 20);
+            
+            // Head
+            manCtx.fillStyle = '#FFD700'; // Gold
+            manCtx.fillRect(7, 0, 10, 8);
+            
+            // Legs
+            manCtx.fillStyle = '#4169E1';
+            manCtx.fillRect(3, 16, 6, 8);
+            manCtx.fillRect(15, 16, 6, 8);
+            
+            previewMan.innerHTML = '';
+            previewMan.appendChild(manCanvas);
+        }
+        
+        // Function to draw a simple pixel-style cow on preview (now white with black spots)
+        function drawCowPreview() {
+            // Create canvas element for cow
+            const cowCanvas = document.createElement('canvas');
+            cowCanvas.width = 32;
+            cowCanvas.height = 32;
+            const cowCtx = cowCanvas.getContext('2d');
+            
+            // Body - now white
+            cowCtx.fillStyle = '#FFFFFF'; // White
+            cowCtx.fillRect(0, 4, 32, 28);
+            
+            // Spots - now black
+            cowCtx.fillStyle = '#000000'; // Black
+            cowCtx.fillRect(4, 8, 8, 8);
+            cowCtx.fillRect(20, 20, 6, 6);
+            
+            // Head - now white
+            cowCtx.fillStyle = '#FFFFFF';
+            cowCtx.fillRect(0, 0, 24, 12);
+            
+            // Head spots
+            cowCtx.fillStyle = '#000000';
+            cowCtx.fillRect(3, 2, 4, 4);
+            cowCtx.fillRect(15, 3, 3, 3);
+            
+            // Legs - now white
+            cowCtx.fillRect(2, 24, 5, 8);
+            cowCtx.fillRect(25, 24, 5, 8);
+            
+            // Leg details (black)
+            cowCtx.fillStyle = '#000000';
+            cowCtx.fillRect(2, 30, 5, 2);
+            cowCtx.fillRect(25, 30, 5, 2);
+            
+            previewCow.innerHTML = '';
+            previewCow.appendChild(cowCanvas);
+        }
+        
+        // Initialize previews
+        drawManPreview();
+        drawCowPreview();
+
+        // Full-screen canvas resize function
+        function resizeCanvas() {
+            // Get full viewport dimensions
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            
+            // Set canvas to full viewport size
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Update man and cow positions if game is running
+            if (gameRunning) {
+                man.x = width / 2;
+                man.y = height / 2;
+                man.targetX = width / 2;
+                man.targetY = height / 2;
+                
+                cow.x = width / 4;
+                cow.y = height / 4;
+            }
+        }
+        
+        // Initialize canvas size
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', function() {
+            // Small delay to ensure orientation change is complete
+            setTimeout(resizeCanvas, 100);
+        });
+        
+        // Man (player) properties
+        const man = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            width: 30,
+            height: 30,
+            speed: 5,
+            targetX: canvas.width / 2,
+            targetY: canvas.height / 2
+        };
+        
+        // Cow properties
+        const cow = {
+            x: canvas.width / 4,
+            y: canvas.height / 4,
+            width: 40,
+            height: 40,
+            speed: 2 // Slower than man
+        };
+        
+        // Check if man is stationary (close to target)
+        function isManStationary() {
+            const dx = man.targetX - man.x;
+            const dy = man.targetY - man.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            return distance < 2; // Consider stationary if within 2 pixels of target
+        }
+        
+        // Update vibration effect
+        function updateVibration() {
+            if (isManStationary()) {
+                // Increase vibration intensity for stronger effect
+                vibrationIntensity = 3; // Even stronger vibration when stationary
+                
+                // Create random vibration pattern
+                vibrationPhase += 0.3;
+                vibrationOffset.x = Math.sin(vibrationPhase) * vibrationIntensity;
+                vibrationOffset.y = Math.cos(vibrationPhase * 1.3) * vibrationIntensity;
+            } else {
+                // Reduce vibration when moving
+                vibrationIntensity = 1;
+                vibrationPhase += 0.1;
+                vibrationOffset.x = Math.sin(vibrationPhase) * vibrationIntensity;
+                vibrationOffset.y = Math.cos(vibrationPhase * 1.3) * vibrationIntensity;
+            }
+        }
+        
+        // Draw a simple pixel-style man with vibration effect
+        function drawMan() {
+            // Apply vibration offset
+            const drawX = man.x + vibrationOffset.x;
+            const drawY = man.y + vibrationOffset.y;
+            
+            ctx.fillStyle = '#4169E1'; // Royal blue
+            
+            // Body
+            ctx.fillRect(drawX - man.width/2, drawY - man.height/2, man.width, man.height);
+            
+            // Head
+            ctx.fillStyle = '#FFD700'; // Gold
+            ctx.fillRect(drawX - 10, drawY - man.height/2 - 15, 20, 15);
+            
+            // Legs
+            ctx.fillStyle = '#4169E1';
+            ctx.fillRect(drawX - 12, drawY + man.height/2 - 5, 8, 10);
+            ctx.fillRect(drawX + 4, drawY + man.height/2 - 5, 8, 10);
+        }
+        
+        // Draw a simple pixel-style cow (now white with black spots)
+        function drawCow() {
+            ctx.fillStyle = '#FFFFFF'; // White body
+            
+            // Body
+            ctx.fillRect(cow.x - cow.width/2, cow.y - cow.height/2, cow.width, cow.height);
+            
+            // Spots - now black
+            ctx.fillStyle = '#000000'; // Black spots
+            ctx.fillRect(cow.x - cow.width/2 + 5, cow.y - cow.height/2 + 5, 10, 10);
+            ctx.fillRect(cow.x + cow.width/2 - 15, cow.y + cow.height/2 - 15, 8, 8);
+            
+            // Head - white
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(cow.x - 15, cow.y - cow.height/2 - 10, 30, 15);
+            
+            // Head details - black
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(cow.x - 12, cow.y - cow.height/2 - 8, 6, 6);
+            ctx.fillRect(cow.x + 2, cow.y - cow.height/2 - 7, 4, 4);
+            
+            // Legs - white
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(cow.x - 17, cow.y + cow.height/2 - 5, 7, 12);
+            ctx.fillRect(cow.x + 10, cow.y + cow.height/2 - 5, 7, 12);
+            
+            // Leg details - black
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(cow.x - 17, cow.y + cow.height/2 + 5, 7, 2);
+            ctx.fillRect(cow.x + 10, cow.y + cow.height/2 + 5, 7, 2);
+        }
+        
+        // Move man towards target position
+        function moveMan() {
+            // Calculate distance to target
+            const dx = man.targetX - man.x;
+            const dy = man.targetY - man.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // If not at target, move toward it
+            if (distance > 1) {
+                man.x += (dx / distance) * man.speed;
+                man.y += (dy / distance) * man.speed;
+            }
+        }
+        
+        // Move cow towards man
+        function moveCow() {
+            // Calculate direction to man
+            const dx = man.x - cow.x;
+            const dy = man.y - cow.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Move cow toward man at its speed
+            if (distance > 0) {
+                cow.x += (dx / distance) * cow.speed;
+                cow.y += (dy / distance) * cow.speed;
+            }
+        }
+        
+        // Check collision between man and cow
+        function checkCollision() {
+            const dx = man.x - cow.x;
+            const dy = man.y - cow.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Collision if distance is less than sum of half widths
+            return distance < (man.width/2 + cow.width/2);
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            if (!gameRunning) return;
+            
+            // Update vibration effect
+            updateVibration();
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw field details (simple grass pattern)
+            ctx.fillStyle = '#7cb342';
+            for (let i = 0; i < canvas.width; i += 40) {
+                for (let j = 0; j < canvas.height; j += 40) {
+                    if ((i + j) % 80 === 0) {
+                        ctx.fillRect(i, j, 20, 10);
+                    }
+                }
+            }
+            
+            // Update game objects
+            moveMan();
+            moveCow();
+            
+            // Check for collision
+            if (checkCollision()) {
+                gameRunning = false;
+                // Show game over screen instead of ending screen directly
+                gameOverScreen.style.display = 'flex';
+                return;
+            }
+            
+            // Draw game objects
+            drawCow();
+            drawMan();
+            
+            // Continue game loop
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Handle mouse clicks/touches
+        function handleInput(e) {
+            if (!gameRunning) return;
+            
+            // Prevent default behavior for touch events
+            if (e.type.startsWith('touch')) {
+                e.preventDefault();
+            }
+            
+            // Get position relative to canvas
+            const rect = canvas.getBoundingClientRect();
+            let x, y;
+            
+            if (e.type.startsWith('touch')) {
+                x = e.touches[0].clientX - rect.left;
+                y = e.touches[0].clientY - rect.top;
+            } else {
+                x = e.clientX - rect.left;
+                y = e.clientY - rect.top;
+            }
+            
+            // Set man's target position
+            man.targetX = x;
+            man.targetY = y;
+        }
+        
+        // Handle mouse drag
+        function handleDrag(e) {
+            if (!gameRunning) return;
+            
+            // Only move if mouse is pressed
+            if (e.buttons === 1) {
+                handleInput(e);
+            }
+        }
+        
+        // Start game function
+        function startGame() {
+            setupScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+            endingScreen.style.display = 'none';
+
+            // Reset positions
+            const width = canvas.width;
+            const height = canvas.height;
+            man.x = width / 2;
+            man.y = height / 2;
+            man.targetX = width / 2;
+            man.targetY = height / 2;
+
+            cow.x = width / 4;
+            cow.y = height / 4;
+
+            // Start game
+            gameRunning = true;
+            gameLoop();
+        }
+        
+        // Continue to ending screen
+        function showEndingScreen() {
+            gameOverScreen.style.display = 'none';
+            endingScreen.style.display = 'flex';
+            endingScreen.classList.add('fade-in');
+        }
+        
+        // Restart game
+        function restartGame() {
+            endingScreen.style.display = 'none';
+            setupScreen.style.display = 'flex';
+            setupScreen.classList.add('fade-in');
+        }
+        
+        // Event listeners
+        startButton.addEventListener('click', function() {
+            startGame();
+        });
+        continueButton.addEventListener('click', showEndingScreen);
+        playAgainButton.addEventListener('click', restartGame);
+        
+        // Mouse events
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('mousemove', handleDrag);
+        
+        // Touch events
+        canvas.addEventListener('touchstart', handleInput, { passive: false });
+        canvas.addEventListener('touchmove', handleInput, { passive: false });
+        
+        // Handle visibility change (pause game when tab is not active)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Game is in background, pause it
+                gameRunning = false;
+            } else {
+                // Game is back in foreground, resume if it was running
+                if (!gameOverScreen.style.display.includes('flex') && !endingScreen.style.display.includes('flex')) {
+                    gameRunning = true;
+                    gameLoop();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
