@@ -112,17 +112,22 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
             color: var(--text-primary);
             background-color: var(--bg-primary);
             padding: 1rem;
             text-align: center;
             z-index: 10;
+            overflow-y: auto;              /* allow scrolling on tall content */
+            -webkit-overflow-scrolling: touch; /* smooth iOS scroll */
         }
         
         #setupScreen {
             display: flex;
+            padding-top: 56px;  /* keep content below top controls on mobile */
+            padding-bottom: 20px;
+            gap: 8px;
         }
         
         #gameOverScreen {
@@ -137,13 +142,21 @@
         #previewContainer {
             width: 80%;
             max-width: 400px;
-            height: 120px;
+            height: 132px; /* fixed to match image height */
             margin: 1rem 0;
             position: relative;
             background-color: #8bc34a; /* Field green */
             border-radius: 8px;
             overflow: hidden;
             box-shadow: var(--shadow-sm);
+            flex-shrink: 0; /* Prevent compression by flexbox */
+            min-height: 132px; /* Ensure minimum height is maintained */
+        }
+        #setupPreviewImage {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
         
         .preview-character {
@@ -227,7 +240,7 @@
         /* Mobile-specific adjustments */
         @media (max-width: 768px) {
             #previewContainer {
-                height: 100px;
+                height: 132px; /* keep fixed on mobile too */
                 margin: 0.75rem 0;
             }
             
@@ -269,7 +282,7 @@
         /* Extra small devices (phones, 320px and down) */
         @media (max-width: 320px) {
             #previewContainer {
-                height: 80px;
+                height: 132px; /* keep fixed on very small screens */
                 margin: 0.5rem 0;
             }
             
@@ -355,26 +368,23 @@
         <!-- Setup Screen -->
         <div id="setupScreen" class="screen fade-in">
               <!-- Preview container with man and cow -->
-            <div id="previewContainer">
-                <!-- Man on the left -->
-                <div class="preview-character preview-man" id="previewMan"></div>
-                <!-- Cow on the right -->
-                <div class="preview-character preview-cow" id="previewCow"></div>
-            </div>
-            <!-- Top bar with hamburger menu -->
-            <button id="menuButton" aria-label="Menu" style="position:absolute; top:12px; left:12px; width:40px; height:40px; border-radius:8px; background: var(--bg-secondary); border:1px solid var(--border-primary); color: var(--text-primary); display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);">
-              <span style="font-size:20px; line-height:1;">☰</span>
-            </button>
-
-            <h1>Retired in a Field</h1>
-            <p>In the Age of AI, we'll end up reitred in a field.<br />So lets get a little practice in now and raise money for nostr devs</p>
-            
-            <!-- Cashu Token Input -->
+               <div id="previewContainer">
+                    <img id="setupPreviewImage" src="js/riaf.png" alt="Preview: cow and man in a field" />
+                </div>
+              <!-- Top bar with hamburger menu -->
+              <button id="menuButton" aria-label="Menu" style="position:absolute; top:12px; left:12px; width:40px; height:40px; border-radius:8px; background: var(--bg-secondary); border:1px solid var(--border-primary); color: var(--text-primary); display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);">
+                  <span style="font-size:20px; line-height:1;">☰</span>
+                </button>
+                <h1>Retired in a Field</h1>
+                <p>In the Age of AI, we'll end up reitred in a field.<br />So lets get a little practice in now and raise money for nostr devs</p>
+                
+                
+                <!-- Cashu Token Input -->
             <input id="cashuTokenInput" type="text" placeholder="Enter Cashu token" autocomplete="off" spellcheck="false" />
             <div id="cashuTokenError" style="color:#dc2626; font-size:0.9rem; display:none; max-width:320px;">Token must start with "cashu".</div>
             
             <button id="startButton" class="btn">Start Game</button>
-            <div id="leaderboard" style="max-width:640px; margin:12px auto 0; padding:10px; border-top:1px solid var(--border-primary);">
+            <div id="leaderboard" style="width:80%; max-width:400px; margin:12px auto 0; padding:10px; border-top:1px solid var(--border-primary);">
                 <div id="leaderboardStatus" style="display:flex; align-items:center; gap:8px; color: var(--text-secondary);">
                     <span class="spinner" style="width:14px; height:14px; border:2px solid var(--border-primary); border-top-color:transparent; border-radius:50%; display:inline-block; animation: spin 0.9s linear infinite;"></span>
                     <span>Leaderboard loading…</span>

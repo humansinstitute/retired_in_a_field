@@ -51,7 +51,8 @@ async function ensurePlayer() {
     privkey: bytesToHex(sk),
     score: 0,
     games_played: 0,
-    initials: null
+    initials: null,
+    last_pledge: 0
   };
   PlayerStore.set(player);
   return player;

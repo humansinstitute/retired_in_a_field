@@ -245,6 +245,7 @@ const UI = {
      */
     showSetupScreen() {
         this.showScreen('setup', true);
+        // no-op
         // Each game requires a new token: clear stored token and input
         try { localStorage.removeItem('cashuToken'); } catch (_) {}
         if (this.inputs.cashuToken) {
@@ -263,6 +264,7 @@ const UI = {
      */
     showGameOverScreen() {
         this.showScreen('gameOver', true);
+        // no-op
     },
 
     /**
@@ -273,6 +275,7 @@ const UI = {
     /** Show initials screen */
     showInitialsScreen() {
         this.showScreen('initials', true);
+        // no-op
     },
 
     /**
@@ -280,6 +283,7 @@ const UI = {
      */
     showGameScreen() {
         this.hideAllScreens();
+        // no-op
     },
 
     /**

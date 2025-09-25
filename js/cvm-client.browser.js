@@ -21,7 +21,9 @@ function ensureLeaderboardUI() {
   if (!container) {
     container = document.createElement('div');
     container.id = 'leaderboard';
-    container.style.maxWidth = '640px';
+    // Match preview image container sizing (80%, max-width 400px)
+    container.style.width = '80%';
+    container.style.maxWidth = '400px';
     container.style.margin = '12px auto 0';
     container.style.padding = '10px';
     container.style.borderTop = '1px solid var(--border-primary)';
@@ -72,30 +74,77 @@ function renderLeaderboard(items) {
   const { status, list } = ensureLeaderboardUI();
   status.style.display = 'none';
   list.innerHTML = '';
-  const title = document.createElement('div');
-  title.textContent = 'Leaderboard';
-  title.style.fontWeight = '600';
-  title.style.marginBottom = '6px';
+  // Title (H2) and tagline
+  const title = document.createElement('h2');
+  title.textContent = 'Leaderboard!';
+  title.style.color = 'var(--accent-primary)';
+  title.style.fontSize = '1.25rem';
+  title.style.fontWeight = '700';
+  title.style.margin = '0 0 4px 0';
   list.appendChild(title);
+  const tagline = document.createElement('div');
+  tagline.textContent = 'May your name be remembered in the halls of Valhalla';
+  tagline.style.color = 'var(--text-secondary)';
+  tagline.style.fontSize = '0.95rem';
+  tagline.style.marginBottom = '8px';
+  list.appendChild(tagline);
+
+  // Header row
+  const header = document.createElement('div');
+  header.style.display = 'grid';
+  header.style.gridTemplateColumns = '48px 1fr 1fr 1fr';
+  header.style.gap = '8px';
+  header.style.color = 'var(--accent-primary)';
+  header.style.fontWeight = '700';
+  header.style.margin = '4px 0';
+  const hPos = document.createElement('div'); hPos.textContent = 'POS';
+  const hInit = document.createElement('div'); hInit.textContent = 'Initials';
+  const hNpub = document.createElement('div'); hNpub.textContent = 'Npub';
+  const hScore = document.createElement('div'); hScore.textContent = 'Score!';
+  header.appendChild(hPos);
+  header.appendChild(hInit);
+  header.appendChild(hNpub);
+  header.appendChild(hScore);
+  list.appendChild(header);
   const ul = document.createElement('div');
   ul.style.display = 'grid';
   ul.style.rowGap = '6px';
   items.forEach((it, idx) => {
     const row = document.createElement('div');
-    row.style.display = 'flex';
-    row.style.justifyContent = 'space-between';
+    row.style.display = 'grid';
+    row.style.gridTemplateColumns = '48px 1fr 1fr 1fr';
+    row.style.gap = '8px';
+    row.style.alignItems = 'center';
     row.style.background = 'var(--bg-secondary)';
     row.style.border = '1px solid var(--border-primary)';
     row.style.borderRadius = '6px';
     row.style.padding = '6px 8px';
-    const left = document.createElement('div');
-    left.textContent = `${idx + 1}. ${it.initials}`;
-    left.style.fontWeight = idx === 0 ? '700' : '600';
-    const right = document.createElement('div');
-    right.textContent = `${Number(it.satsLost)} sats`;
-    right.style.fontVariantNumeric = 'tabular-nums';
-    row.appendChild(left);
-    row.appendChild(right);
+
+    const pos = document.createElement('div');
+    pos.textContent = String(idx + 1);
+    pos.style.fontWeight = idx === 0 ? '800' : '700';
+    pos.style.textAlign = 'left';
+
+    const init = document.createElement('div');
+    init.textContent = String(it.initials || '').toUpperCase();
+    init.style.fontWeight = idx === 0 ? '800' : '700';
+
+    const npub = document.createElement('div');
+    const np = typeof it.npub === 'string' && it.npub.length > 0 ? it.npub : '';
+    const npSuffix = np ? np.slice(-6) : '';
+    npub.textContent = npSuffix;
+    npub.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace';
+    npub.style.opacity = '0.85';
+
+    const score = document.createElement('div');
+    score.textContent = `${Number(it.satsLost)} sats`;
+    score.style.fontVariantNumeric = 'tabular-nums';
+    score.style.textAlign = 'right';
+
+    row.appendChild(pos);
+    row.appendChild(init);
+    row.appendChild(npub);
+    row.appendChild(score);
     ul.appendChild(row);
   });
   list.appendChild(ul);
