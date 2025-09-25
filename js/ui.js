@@ -113,7 +113,12 @@ const UI = {
                         ? await window.redeemCashuAccess(token, 21)
                         : { decision: 'ACCESS_DENIED', amount: 0, reason: 'cashu_access unavailable', mode: 'error' };
                     if (res && res.decision === 'ACCESS_GRANTED') {
+                        // Save token locally and record pledged amount for this session
                         try { localStorage.setItem('cashuToken', token); } catch (_) {}
+                        try {
+                            const pledged = Number(res.amount || 21);
+                            if (window.updatePlayer) window.updatePlayer({ last_pledge: pledged });
+                        } catch (_) {}
                         if (this.onStartGame) this.onStartGame();
                     } else {
                         const reason = res && res.reason ? String(res.reason) : 'unknown';

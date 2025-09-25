@@ -223,9 +223,10 @@ const GameEngine = {
         try {
             if (window.updatePlayer) {
                 const current = window.getPlayer() || {};
+                const pledged = Number(current.last_pledge || 21);
                 const p = window.updatePlayer({
                     games_played: (current.games_played || 0) + 1,
-                    score: (current.score || 0) + 21
+                    score: (current.score || 0) + pledged
                 });
                 if (window.renderPlayerSummary) window.renderPlayerSummary(p);
             }
@@ -236,12 +237,19 @@ const GameEngine = {
             const player = window.getPlayer ? window.getPlayer() : null;
             const npub = player?.npub;
             const initials = player?.initials;
-            const satsLost = 21; // per-game sats lost for this round
+            const satsLost = Number(player?.last_pledge || 21); // per-game sats lost for this round
             if (window.submitLeaderboardEntry && npub && initials) {
                 Promise.resolve(window.submitLeaderboardEntry({ npub, initials, satsLost }))
                     .then((ok) => { if (ok && window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); })
                     .catch(() => {});
             }
+        } catch (_) {}
+        // Update game-over score message to reflect pledged amount
+        try {
+            const player = window.getPlayer ? window.getPlayer() : null;
+            const pledged = Number(player?.last_pledge || 21);
+            const msg = document.getElementById('scoreMessage');
+            if (msg) msg.textContent = `You have scored ${pledged} sats!`;
         } catch (_) {}
         UI.showGameOverScreen();
     },
