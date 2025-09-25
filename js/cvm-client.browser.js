@@ -159,6 +159,89 @@ async function fetchLeaderboardWithPlayerKey() {
   }
 }
 
+// Submit a single leaderboard entry via MCP over Nostr
+function generateRefId() {
+  // RFC4122-ish v4 using crypto if available
+  try {
+    const buf = new Uint8Array(16);
+    (self.crypto || window.crypto).getRandomValues(buf);
+    // Per RFC: set version and variant bits
+    buf[6] = (buf[6] & 0x0f) | 0x40;
+    buf[8] = (buf[8] & 0x3f) | 0x80;
+    const hex = [...buf].map(b => b.toString(16).padStart(2, '0'));
+    return (
+      hex.slice(0, 4).join('') + '-' +
+      hex.slice(4, 6).join('') + '-' +
+      hex.slice(6, 8).join('') + '-' +
+      hex.slice(8, 10).join('') + '-' +
+      hex.slice(10, 16).join('')
+    );
+  } catch (_) {
+    // Fallback: not cryptographically strong, but sufficient as a dedupe key
+    return 'ref-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+}
+
+async function submitLeaderboardEntry({ npub, initials, satsLost, refId }) {
+  try {
+    if (!SERVER_PUBKEY) {
+      console.warn("CVM server pubkey not configured (window.CVM_SERVER_PUBKEY). Skipping leaderboard update.");
+      return false;
+    }
+
+    // Ensure player is ready to obtain privkey for signing
+    let player = window.getPlayer ? window.getPlayer() : null;
+    if (!player || !player.privkey) {
+      if (window.whenPlayerReady) {
+        player = await window.whenPlayerReady;
+      } else {
+        await new Promise(resolve => window.addEventListener('player-ready', () => resolve(), { once: true }));
+        player = window.getPlayer ? window.getPlayer() : null;
+      }
+    }
+
+    const priv = player?.privkey;
+    if (!priv) {
+      console.warn("Player private key unavailable; cannot submit leaderboard entry.");
+      return false;
+    }
+
+    // Validate required args
+    if (!npub || !initials || typeof satsLost === 'undefined') {
+      console.warn("submitLeaderboardEntry missing required fields", { npub, initials, satsLost });
+      return false;
+    }
+    // Basic shape checks per server spec
+    if (typeof initials !== 'string' || initials.length !== 3) {
+      console.warn("submitLeaderboardEntry invalid initials (must be 3 chars)", initials);
+      return false;
+    }
+
+    const { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner } = await loadDeps();
+
+    const signer = new PrivateKeySigner(priv);
+    const relayPool = new ApplesauceRelayPool(RELAYS);
+    const clientTransport = new NostrClientTransport({
+      signer,
+      relayHandler: relayPool,
+      serverPubkey: SERVER_PUBKEY,
+    });
+
+    const mcpClient = new Client({ name: "retired-fe-client", version: "1.0.0" });
+    await mcpClient.connect(clientTransport);
+
+    const args = { npub, initials, satsLost: Number(satsLost), refId: refId || generateRefId() };
+    const result = await mcpClient.callTool({ name: "update_leaderboard", arguments: args });
+    console.log("Leaderboard update result:", result);
+
+    await mcpClient.close();
+    return true;
+  } catch (err) {
+    console.error("Failed to submit leaderboard entry via MCP:", err);
+    return false;
+  }
+}
+
 // Run after DOM ready to ensure player session exists
 function runOnLoad() {
   // Slight defer to allow nostr.js to finish initial session creation
@@ -173,3 +256,4 @@ if (document.readyState === 'loading') {
 
 // Expose for manual retries if needed
 window.fetchLeaderboardWithPlayerKey = fetchLeaderboardWithPlayerKey;
+window.submitLeaderboardEntry = submitLeaderboardEntry;

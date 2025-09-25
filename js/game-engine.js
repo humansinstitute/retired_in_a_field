@@ -230,6 +230,19 @@ const GameEngine = {
                 if (window.renderPlayerSummary) window.renderPlayerSummary(p);
             }
         } catch (_) {}
+
+        // Submit leaderboard entry (non-blocking) and refresh leaderboard on success
+        try {
+            const player = window.getPlayer ? window.getPlayer() : null;
+            const npub = player?.npub;
+            const initials = player?.initials;
+            const satsLost = 21; // per-game sats lost for this round
+            if (window.submitLeaderboardEntry && npub && initials) {
+                Promise.resolve(window.submitLeaderboardEntry({ npub, initials, satsLost }))
+                    .then((ok) => { if (ok && window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); })
+                    .catch(() => {});
+            }
+        } catch (_) {}
         UI.showGameOverScreen();
     },
     
