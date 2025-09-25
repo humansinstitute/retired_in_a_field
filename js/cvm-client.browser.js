@@ -89,13 +89,13 @@ function renderLeaderboard(items) {
   tagline.style.marginBottom = '8px';
   list.appendChild(tagline);
 
-  // Local player quick stats (one line)
+  // Player quick stats (from server if available)
   try {
-    const p = (window.getPlayer && window.getPlayer()) || {};
-    const initials = (p.initials || '').toString().toUpperCase();
-    const games = Number(p.games_played || 0);
-    const score = Number(p.score || 0);
-    if (initials || games || score) {
+    const sp = window._serverPlayer || null;
+    if (sp && (sp.initials || sp.played || sp.score)) {
+      const initials = String(sp.initials || '').toUpperCase();
+      const games = Number(sp.played || 0);
+      const score = Number(sp.score || 0);
       const quick = document.createElement('div');
       quick.id = 'leaderboardPlayerStats';
       quick.style.color = 'var(--text-tertiary)';
@@ -171,6 +171,8 @@ function renderPlayerSummaryFromServer(data) {
   try {
     const el = document.getElementById('statsModalContent');
     if (!el) return;
+    // Cache latest server player for other UI (e.g., quick stats)
+    try { window._serverPlayer = data; } catch (_) {}
     const initials = (data && data.initials) ? String(data.initials) : '';
     const score = Number(data && data.score ? data.score : 0);
     const played = Number(data && data.played ? data.played : 0);

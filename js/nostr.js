@@ -127,9 +127,19 @@ async function initNostrSession() {
 window.PlayerStore = PlayerStore;
 window.getPlayer = () => PlayerStore.get();
 window.updatePlayer = patch => PlayerStore.update(patch);
+// Stats should only come from Context VM; delegate to fetch when asked to render
 window.renderPlayerSummary = () => {
-  const p = PlayerStore.get();
-  if (p) renderPlayerSummary(p);
+  try {
+    if (window.fetchPlayerStatsWithPlayerKey) {
+      window.fetchPlayerStatsWithPlayerKey();
+      return;
+    }
+  } catch (_) {}
+  // Fallback: clear stats area if server fetch unavailable
+  try {
+    const el = document.getElementById('statsModalContent');
+    if (el) el.innerHTML = '';
+  } catch (_) {}
 };
 
 // Run after DOM is ready

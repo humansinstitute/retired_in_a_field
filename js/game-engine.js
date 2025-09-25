@@ -6,6 +6,8 @@
 const GameEngine = {
     // Game state
     gameRunning: false,
+    // Track if game was running before tab was hidden to avoid false resumes
+    wasRunningBeforeHidden: false,
     
     // Speed scaling state for the cow
     speedScaling: {
@@ -81,17 +83,20 @@ const GameEngine = {
     setupVisibilityHandling() {
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                // Game is in background, pause it
+                // Game is in background, pause it and remember prior state
+                this.wasRunningBeforeHidden = this.gameRunning === true;
                 this.gameRunning = false;
+                try { Controls.setGameRunning(false); } catch (_) {}
             } else {
-                // Game is back in foreground, resume if appropriate
-                const shouldResume = UI.handleVisibilityChange(true, this.gameRunning);
+                // Game is back in foreground, resume only if it was running before
+                const shouldResume = this.wasRunningBeforeHidden && UI.handleVisibilityChange(true, this.gameRunning);
                 if (shouldResume && !UI.isAnyScreenVisible()) {
                     this.gameRunning = true;
                     // Prevent catching up increases during background time
                     this.speedScaling.lastIncreaseAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
                     this.gameLoop();
                 }
+                this.wasRunningBeforeHidden = false;
             }
         });
     },
@@ -230,26 +235,17 @@ const GameEngine = {
     gameOver() {
         this.gameRunning = false;
         Controls.setGameRunning(false);
-        // Increment games played and score, update summary
-        try {
-            if (window.updatePlayer) {
-                const current = window.getPlayer() || {};
-                const pledged = Number(current.last_pledge || 21);
-                const p = window.updatePlayer({
-                    games_played: (current.games_played || 0) + 1,
-                    score: (current.score || 0) + pledged
-                });
-                if (window.renderPlayerSummary) window.renderPlayerSummary(p);
-            }
-        } catch (_) {}
+        // Do not mutate local stats; authoritative stats come from Context VM
+        // Optionally refresh server stats display
+        try { if (window.fetchPlayerStatsWithPlayerKey) window.fetchPlayerStatsWithPlayerKey(); } catch (_) {}
 
         // Submit leaderboard entry (non-blocking) and refresh leaderboard on success
         try {
             const player = window.getPlayer ? window.getPlayer() : null;
             const npub = player?.npub;
             const initials = player?.initials;
-            const satsLost = Number(player?.last_pledge || 21); // per-game sats lost for this round
-            if (window.submitLeaderboardEntry && npub && initials) {
+            const satsLost = Number((player?.last_pledge ?? 0)); // per-game sats lost for this round
+            if (window.submitLeaderboardEntry && npub && initials && satsLost > 0) {
                 Promise.resolve(window.submitLeaderboardEntry({ npub, initials, satsLost }))
                     .then((ok) => { if (ok && window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); })
                     .catch(() => {});
@@ -258,7 +254,7 @@ const GameEngine = {
         // Update game-over score message to reflect pledged amount
         try {
             const player = window.getPlayer ? window.getPlayer() : null;
-            const pledged = Number(player?.last_pledge || 21);
+            const pledged = Number((player?.last_pledge ?? 0));
             const msg = document.getElementById('scoreMessage');
             if (msg) msg.textContent = `You have scored ${pledged} sats!`;
         } catch (_) {}

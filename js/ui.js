@@ -116,7 +116,7 @@ const UI = {
                         // Save token locally and record pledged amount for this session
                         try { localStorage.setItem('cashuToken', token); } catch (_) {}
                         try {
-                            const pledged = Number(res.amount || 21);
+                            const pledged = Number(res.amount || 0);
                             if (window.updatePlayer) window.updatePlayer({ last_pledge: pledged });
                         } catch (_) {}
                         if (this.onStartGame) this.onStartGame();
@@ -262,6 +262,9 @@ const UI = {
         // Hide any open modals
         this.showOptions(false);
         this.showStats(false);
+        // Refresh authoritative stats and leaderboard from Context VM
+        try { if (window.fetchPlayerStatsWithPlayerKey) window.fetchPlayerStatsWithPlayerKey(); } catch (_) {}
+        try { if (window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); } catch (_) {}
     },
 
     /**
