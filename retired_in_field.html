@@ -121,14 +121,12 @@
             z-index: 10;
         }
         
-        #setupScreen {
+        #tokenScreen {
             display: flex;
         }
-        
-        #gameOverScreen {
-            display: none;
-        }
-        
+
+        #setupScreen,
+        #gameOverScreen,
         #endingScreen {
             display: none;
         }
@@ -212,6 +210,21 @@
             border-color: var(--accent-secondary);
             transform: translateY(-1px);
             box-shadow: var(--shadow-lg);
+        }
+
+        #tokenFeedback {
+            min-height: 1.5rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        #tokenFeedback.error {
+            color: #dc2626;
+        }
+
+        #tokenFeedback.success {
+            color: var(--accent-secondary);
         }
 
         
@@ -352,6 +365,16 @@
     <div id="gameContainer">
         <canvas id="gameCanvas"></canvas>
         
+        <!-- Token Screen -->
+        <div id="tokenScreen" class="screen fade-in">
+            <h1>Retired in a Field</h1>
+            <p>Paste your Cashu token below. We'll keep it in this browser for the session.</p>
+            <input id="tokenInput" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="cashu...">
+            <div id="tokenFeedback" aria-live="polite"></div>
+            <button id="saveTokenButton" class="btn">Save Token</button>
+            <button id="useSavedTokenButton" class="btn" style="display: none;">Use Saved Token</button>
+        </div>
+
         <!-- Setup Screen -->
         <div id="setupScreen" class="screen fade-in">
             <h1>Retired in a Field</h1>
@@ -388,6 +411,11 @@
         // Game variables
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const tokenScreen = document.getElementById('tokenScreen');
+        const tokenInput = document.getElementById('tokenInput');
+        const tokenFeedback = document.getElementById('tokenFeedback');
+        const saveTokenButton = document.getElementById('saveTokenButton');
+        const useSavedTokenButton = document.getElementById('useSavedTokenButton');
         const setupScreen = document.getElementById('setupScreen');
         const gameOverScreen = document.getElementById('gameOverScreen');
         const endingScreen = document.getElementById('endingScreen');
@@ -398,6 +426,69 @@
         // Preview elements
         const previewMan = document.getElementById('previewMan');
         const previewCow = document.getElementById('previewCow');
+
+        let cachedToken = null;
+
+        function setTokenFeedback(message = '', type = '') {
+            tokenFeedback.textContent = message;
+            tokenFeedback.classList.remove('error', 'success');
+            if (type) {
+                tokenFeedback.classList.add(type);
+            }
+        }
+
+        function showSetupScreen() {
+            tokenScreen.style.display = 'none';
+            setupScreen.style.display = 'flex';
+            setupScreen.classList.add('fade-in');
+        }
+
+        function persistToken(value) {
+            cachedToken = value;
+            try {
+                window.localStorage.setItem('cashuToken', value);
+            } catch (err) {
+                console.warn('Unable to persist token locally.', err);
+            }
+        }
+
+        tokenInput.addEventListener('input', () => setTokenFeedback());
+
+        saveTokenButton.addEventListener('click', () => {
+            const value = tokenInput.value.trim();
+            if (!value) {
+                setTokenFeedback('Please enter a Cashu token before continuing.', 'error');
+                tokenInput.focus();
+                return;
+            }
+
+            persistToken(value);
+            setTokenFeedback();
+            showSetupScreen();
+        });
+
+        useSavedTokenButton.addEventListener('click', () => {
+            if (!cachedToken) {
+                setTokenFeedback('No saved token found. Paste one above first.', 'error');
+                return;
+            }
+            setTokenFeedback();
+            showSetupScreen();
+        });
+
+        (function initialiseToken() {
+            try {
+                const storedToken = window.localStorage.getItem('cashuToken');
+                if (storedToken) {
+                    cachedToken = storedToken;
+                    tokenInput.value = storedToken;
+                    useSavedTokenButton.style.display = 'block';
+                    setTokenFeedback('Using your saved token. Update it or continue.', 'success');
+                }
+            } catch (err) {
+                console.warn('Unable to load saved token.', err);
+            }
+        })();
         
         // Game state
         let gameRunning = false;
