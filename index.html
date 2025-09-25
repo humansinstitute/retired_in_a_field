@@ -363,11 +363,11 @@
             </div>
             <h1>Retired in a Field</h1>
             <div id="playerSummary" style="margin: 6px 0 10px; color: var(--text-secondary); font-weight: 500;"></div>
-            <p>In the Age of AI, we'll end up reitred in a field.</p>
-            <p>Lets get some practice in now and donate to Nostr devs along the way :)</p>
-            <p>Stretch those legs and get ready to outrun the cow.</p>
+            <p>In the Age of AI, we'll end up reitred in a field.<br />So lets get a little practice in now and raise money for nostr devs</p>
             
-            
+            <!-- Cashu Token Input -->
+            <input id="cashuTokenInput" type="text" placeholder="Enter Cashu token" autocomplete="off" spellcheck="false" />
+            <div id="cashuTokenError" style="color:#dc2626; font-size:0.9rem; display:none; max-width:320px;">Token must start with "cashu".</div>
             
             <button id="startButton" class="btn">Start Game</button>
             <button id="showKeysBtn" class="btn" style="margin-left: 8px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-primary);">Show Keys</button>
@@ -437,9 +437,9 @@
     </div>
 
     <!-- Optional local config (gitignored). Copy js/config.sample.js to js/config.local.js and set CVM_SERVER_PUBKEY. -->
-    <script src="js/config.local.js" type="module"></script>
-    <script src="js/nostr.js" type="module"></script>
-    <script src="js/cvm-client.browser.js" type="module"></script>
+    <script src="js/config.local.js"></script>
+    <script src="js/nostr.js"></script>
+    <script src="js/cvm-client.browser.js"></script>
     <script src="js/game-config.js"></script>
     <script src="js/graphics.js"></script>
     <script src="js/controls.js"></script>

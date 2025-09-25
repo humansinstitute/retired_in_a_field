@@ -19,6 +19,17 @@ const UI = {
         playAgain: null,
         initialsContinue: null
     },
+
+    // Inputs
+    inputs: {
+        cashuToken: null
+    },
+
+    // Misc UI elements
+    els: {
+        cashuError: null,
+        toastContainer: null
+    },
     
     // Callback functions
     onStartGame: null,
@@ -38,6 +49,12 @@ const UI = {
         this.setupElements();
         this.setupEventListeners();
         this.setupPreviews();
+
+        // Initial state: if setup screen is visible, ensure Start is disabled
+        if (this.screens.setup && this.screens.setup.style.display !== 'none') {
+            this.setButtonEnabled('start', false);
+            this.showCashuError(false);
+        }
     },
 
     /**
@@ -55,6 +72,12 @@ const UI = {
         this.buttons.continue = document.getElementById('continueButton');
         this.buttons.playAgain = document.getElementById('playAgainButton');
         this.buttons.initialsContinue = document.getElementById('initialsContinueButton');
+
+        // Inputs
+        this.inputs.cashuToken = document.getElementById('cashuTokenInput');
+
+        // Misc elements
+        this.els.cashuError = document.getElementById('cashuTokenError');
     },
 
     /**
@@ -62,9 +85,30 @@ const UI = {
      */
     setupEventListeners() {
         if (this.buttons.start) {
-            this.buttons.start.addEventListener('click', () => {
-                if (this.onStartGame) {
-                    this.onStartGame();
+            this.buttons.start.addEventListener('click', async () => {
+                // Guard: require a token-ish value (basic UI check), then verify via cashu_access
+                const token = (this.inputs.cashuToken?.value || '').trim();
+                const valid = this.validateCashuToken(token);
+                if (!valid) {
+                    this.showCashuError(true);
+                    return;
+                }
+                this.setButtonLoading('start', true);
+                try {
+                    const res = (window.redeemCashuAccess)
+                        ? await window.redeemCashuAccess(token, 21)
+                        : { decision: 'ACCESS_DENIED', amount: 0, reason: 'cashu_access unavailable', mode: 'error' };
+                    if (res && res.decision === 'ACCESS_GRANTED') {
+                        try { localStorage.setItem('cashuToken', token); } catch (_) {}
+                        if (this.onStartGame) this.onStartGame();
+                    } else {
+                        const reason = res && res.reason ? String(res.reason) : 'unknown';
+                        this.showToast(`Minimum to play is 21 sats. ${reason}`);
+                    }
+                } catch (e) {
+                    this.showToast(`Minimum to play is 21 sats. ${String(e && e.message ? e.message : e)}`);
+                } finally {
+                    this.setButtonLoading('start', false);
                 }
             });
         }
@@ -84,6 +128,16 @@ const UI = {
                 if (this.onInitialsConfirm) {
                     this.onInitialsConfirm();
                 }
+            });
+        }
+
+        // Live validation for Cashu token input
+        if (this.inputs.cashuToken) {
+            this.inputs.cashuToken.addEventListener('input', () => {
+                const token = this.inputs.cashuToken.value.trim();
+                const valid = this.validateCashuToken(token);
+                this.showCashuError(token.length > 0 && !valid);
+                this.setButtonEnabled('start', valid);
             });
         }
     },
@@ -140,6 +194,14 @@ const UI = {
      */
     showSetupScreen() {
         this.showScreen('setup', true);
+        // Each game requires a new token: clear stored token and input
+        try { localStorage.removeItem('cashuToken'); } catch (_) {}
+        if (this.inputs.cashuToken) {
+            this.inputs.cashuToken.value = '';
+        }
+        this.showCashuError(false);
+        // Disable Start until a valid token is entered
+        this.setButtonEnabled('start', false);
     },
 
     /**
@@ -212,6 +274,18 @@ const UI = {
         }
     },
 
+    // Validate Cashu token with a simple prefix check
+    validateCashuToken(token) {
+        return typeof token === 'string' && token.toLowerCase().startsWith('cashu');
+    },
+
+    // Toggle error message under token input
+    showCashuError(show) {
+        if (this.els.cashuError) {
+            this.els.cashuError.style.display = show ? 'block' : 'none';
+        }
+    },
+
     /**
      * Add loading state to a button
      */
@@ -226,6 +300,41 @@ const UI = {
                 button.disabled = false;
             }
         }
+    },
+
+    /** Simple toast notification */
+    showToast(message, duration = 4000) {
+        if (!this.els.toastContainer) {
+            const div = document.createElement('div');
+            div.id = 'toastContainer';
+            div.style.position = 'fixed';
+            div.style.left = '50%';
+            div.style.bottom = '24px';
+            div.style.transform = 'translateX(-50%)';
+            div.style.zIndex = '10000';
+            div.style.display = 'flex';
+            div.style.flexDirection = 'column';
+            div.style.alignItems = 'center';
+            div.style.gap = '8px';
+            document.body.appendChild(div);
+            this.els.toastContainer = div;
+        }
+        const toast = document.createElement('div');
+        toast.textContent = String(message || '');
+        toast.style.background = 'var(--bg-secondary)';
+        toast.style.border = '1px solid var(--border-primary)';
+        toast.style.color = 'var(--text-primary)';
+        toast.style.boxShadow = 'var(--shadow-md)';
+        toast.style.padding = '10px 12px';
+        toast.style.borderRadius = '8px';
+        toast.style.maxWidth = '90vw';
+        toast.style.fontSize = '0.95rem';
+        this.els.toastContainer.appendChild(toast);
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.25s ease';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, Math.max(1000, duration));
     },
 
     /**

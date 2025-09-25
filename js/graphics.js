@@ -47,7 +47,13 @@ const Graphics = {
      * Update vibration effect based on man's movement state
      */
     updateVibration(isStationary) {
-        const config = GameConfig.vibration;
+        const config = (typeof GameConfig !== 'undefined' && GameConfig.vibration) ? GameConfig.vibration : {
+            baseIntensity: 0.5,
+            stationaryIntensity: 0.2,
+            phaseIncrement: 0.2,
+            stationaryPhaseIncrement: 0.1,
+            stationaryThreshold: 2
+        };
         
         if (isStationary) {
             this.vibrationPhase += config.stationaryPhaseIncrement;
@@ -75,7 +81,7 @@ const Graphics = {
      */
     drawField() {
         if (!this.ctx) return;
-        
+        if (typeof GameConfig === 'undefined' || !GameConfig.canvas) return;
         const config = GameConfig.canvas;
         this.ctx.fillStyle = config.fieldColor;
         
@@ -93,7 +99,7 @@ const Graphics = {
      */
     drawMan(man) {
         if (!this.ctx) return;
-        
+        if (typeof GameConfig === 'undefined' || !GameConfig.man) return;
         const config = GameConfig.man;
         
         // Apply vibration offset
@@ -139,7 +145,7 @@ const Graphics = {
      */
     drawCow(cow) {
         if (!this.ctx) return;
-        
+        if (typeof GameConfig === 'undefined' || !GameConfig.cow) return;
         const config = GameConfig.cow;
         
         // Body
@@ -219,6 +225,7 @@ const Graphics = {
      * Create preview canvas for man character
      */
     createManPreview() {
+        if (typeof GameConfig === 'undefined' || !GameConfig.preview) return document.createElement('canvas');
         const config = GameConfig.preview.man;
         const manCanvas = document.createElement('canvas');
         manCanvas.width = config.width;
@@ -245,6 +252,7 @@ const Graphics = {
      * Create preview canvas for cow character
      */
     createCowPreview() {
+        if (typeof GameConfig === 'undefined' || !GameConfig.preview) return document.createElement('canvas');
         const config = GameConfig.preview.cow;
         const cowCanvas = document.createElement('canvas');
         cowCanvas.width = config.width;
@@ -286,6 +294,7 @@ const Graphics = {
      * Set up preview characters in the setup screen
      */
     setupPreviews() {
+        if (typeof GameConfig === 'undefined') return; // avoid crashing if config not loaded yet
         const previewMan = document.getElementById('previewMan');
         const previewCow = document.getElementById('previewCow');
         

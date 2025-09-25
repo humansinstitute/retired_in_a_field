@@ -101,6 +101,76 @@ function renderLeaderboard(items) {
   list.appendChild(ul);
 }
 
+function renderPlayerSummaryFromServer(data) {
+  try {
+    const el = document.getElementById('playerSummary');
+    if (!el) return;
+    const initials = (data && data.initials) ? String(data.initials) : '';
+    const score = Number(data && data.score ? data.score : 0);
+    const played = Number(data && data.played ? data.played : 0);
+    if (!initials) {
+      // If no initials on server, keep existing UI (might be empty)
+      return;
+    }
+    el.innerHTML = `
+      <div>Player: ${initials}</div>
+      <div>Score: ${score} Sats</div>
+      <div>Games Played: ${played}</div>
+    `;
+  } catch (_) {}
+}
+
+async function fetchPlayerStatsWithPlayerKey() {
+  try {
+    // Wait for player readiness
+    let player = window.getPlayer ? window.getPlayer() : null;
+    if (!player || !player.privkey) {
+      if (window.whenPlayerReady) {
+        player = await window.whenPlayerReady;
+      } else {
+        await new Promise(resolve => window.addEventListener('player-ready', () => resolve(), { once: true }));
+        player = window.getPlayer ? window.getPlayer() : null;
+      }
+    }
+    const priv = player?.privkey;
+    const npub = player?.npub;
+    if (!npub) return;
+
+    if (!SERVER_PUBKEY) {
+      console.warn("CVM server pubkey not configured (window.CVM_SERVER_PUBKEY). Skipping player stats fetch.");
+      return;
+    }
+
+    const { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner } = await loadDeps();
+    const signer = new PrivateKeySigner(priv);
+    const relayPool = new ApplesauceRelayPool(RELAYS);
+    const clientTransport = new NostrClientTransport({ signer, relayHandler: relayPool, serverPubkey: SERVER_PUBKEY });
+
+    const mcpClient = new Client({ name: "retired-fe-client", version: "1.0.0" });
+    await mcpClient.connect(clientTransport);
+
+    const result = await mcpClient.callTool({ name: "get_player", arguments: { npub } });
+    // Try to normalize result; some MCP bridges return { content: [{ text: "...json..." }] }
+    let data = null;
+    try {
+      const text = result?.content?.[0]?.text;
+      if (typeof text === 'string') data = JSON.parse(text);
+    } catch (_) {}
+    if (!data && result && (result.npub || result.error)) {
+      data = result;
+    }
+    if (data && !data.error) {
+      renderPlayerSummaryFromServer(data);
+    } else if (data && data.error) {
+      console.warn('get_player error:', data.error, 'npub:', data.npub);
+    }
+
+    await mcpClient.close();
+  } catch (err) {
+    console.error("Failed to fetch player stats via MCP:", err);
+  }
+}
+
 async function fetchLeaderboardWithPlayerKey() {
   try {
     // Ensure UI and show spinner
@@ -245,7 +315,10 @@ async function submitLeaderboardEntry({ npub, initials, satsLost, refId }) {
 // Run after DOM ready to ensure player session exists
 function runOnLoad() {
   // Slight defer to allow nostr.js to finish initial session creation
-  setTimeout(fetchLeaderboardWithPlayerKey, 0);
+  setTimeout(() => {
+    fetchLeaderboardWithPlayerKey();
+    fetchPlayerStatsWithPlayerKey();
+  }, 0);
 }
 
 if (document.readyState === 'loading') {
@@ -257,3 +330,63 @@ if (document.readyState === 'loading') {
 // Expose for manual retries if needed
 window.fetchLeaderboardWithPlayerKey = fetchLeaderboardWithPlayerKey;
 window.submitLeaderboardEntry = submitLeaderboardEntry;
+window.fetchPlayerStatsWithPlayerKey = fetchPlayerStatsWithPlayerKey;
+
+// Redeem a Cashu token and check access via MCP tool `cashu_access`
+async function redeemCashuAccess(encodedToken, minAmount = 21) {
+  try {
+    if (!encodedToken || typeof encodedToken !== 'string') {
+      return { decision: 'ACCESS_DENIED', amount: 0, reason: 'encodedToken is required (cashu... string)', mode: 'error' };
+    }
+
+    if (!SERVER_PUBKEY) {
+      return { decision: 'ACCESS_DENIED', amount: 0, reason: 'CVM server pubkey not configured', mode: 'error' };
+    }
+
+    // Wait for player readiness to get signing key
+    let player = window.getPlayer ? window.getPlayer() : null;
+    if (!player || !player.privkey) {
+      if (window.whenPlayerReady) {
+        player = await window.whenPlayerReady;
+      } else {
+        await new Promise(resolve => window.addEventListener('player-ready', () => resolve(), { once: true }));
+        player = window.getPlayer ? window.getPlayer() : null;
+      }
+    }
+    const priv = player?.privkey;
+    if (!priv) {
+      return { decision: 'ACCESS_DENIED', amount: 0, reason: 'player key unavailable', mode: 'error' };
+    }
+
+    const { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner } = await loadDeps();
+    const signer = new PrivateKeySigner(priv);
+    const relayPool = new ApplesauceRelayPool(RELAYS);
+    const clientTransport = new NostrClientTransport({ signer, relayHandler: relayPool, serverPubkey: SERVER_PUBKEY });
+    const mcpClient = new Client({ name: 'retired-fe-client', version: '1.0.0' });
+    await mcpClient.connect(clientTransport);
+
+    const args = { encodedToken, minAmount: Number(minAmount || 21) };
+    const result = await mcpClient.callTool({ name: 'cashu_access', arguments: args });
+
+    await mcpClient.close();
+
+    // Try to normalize response to the declared interface
+    let data = null;
+    try {
+      const text = result?.content?.[0]?.text;
+      if (typeof text === 'string') data = JSON.parse(text);
+    } catch (_) {}
+    if (!data && result && (result.decision || result.reason)) {
+      data = result;
+    }
+    if (!data) {
+      return { decision: 'ACCESS_DENIED', amount: 0, reason: 'unexpected empty response', mode: 'error' };
+    }
+    return data;
+  } catch (err) {
+    console.error('cashu_access call failed:', err);
+    return { decision: 'ACCESS_DENIED', amount: 0, reason: String(err && err.message ? err.message : err), mode: 'error' };
+  }
+}
+
+window.redeemCashuAccess = redeemCashuAccess;
