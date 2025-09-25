@@ -354,24 +354,33 @@
         
         <!-- Setup Screen -->
         <div id="setupScreen" class="screen fade-in">
-            <h1>Retired in a Field</h1>
-            <p>Stretch those legs and get ready to outrun the cow.</p>
-            
-            <!-- Preview container with man and cow -->
+              <!-- Preview container with man and cow -->
             <div id="previewContainer">
                 <!-- Man on the left -->
                 <div class="preview-character preview-man" id="previewMan"></div>
                 <!-- Cow on the right -->
                 <div class="preview-character preview-cow" id="previewCow"></div>
             </div>
+            <h1>Retired in a Field</h1>
+            <div id="playerSummary" style="margin: 6px 0 10px; color: var(--text-secondary); font-weight: 500;"></div>
+            <p>In the Age of AI, we'll end up reitred in a field.</p>
+            <p>Lets get some practice in now and donate to Nostr devs along the way :)</p>
+            <p>Stretch those legs and get ready to outrun the cow.</p>
+            
+            
             
             <button id="startButton" class="btn">Start Game</button>
+            <div id="nostrKeys" style="max-width: 640px; margin-top: 12px; color: var(--text-secondary); font-size: 0.9rem; word-break: break-all;">
+                <!-- Nostr keys will appear here -->
+            </div>
         </div>
         
         <!-- Game Over Screen -->
         <div id="gameOverScreen" class="screen">
             <h1>Gotcha!</h1>
-            <p>The cow has caught you!</p>
+            <p>Oh no! The cow has caught you!</p>
+            <p>Its not easy to be a retired in a field.</p>
+            <p>The more you practice the more you'll climb up the leaderboard!</p>
             <button id="continueButton" class="btn">Continue</button>
         </div>
         
@@ -379,410 +388,18 @@
         <div id="endingScreen" class="screen">
             <h1>Game Complete</h1>
             <p>Thank you for playing!</p>
-            <div id="cashAmount">That's my money now</div>
+            <p id="scoreMessage">You have scored 21 sats!</p>
+            <div id="cashAmount">Your money goes towards supporting Nostr Devs!</div>
             <button id="playAgainButton" class="btn">Play Again</button>
         </div>
     </div>
 
-    <script>
-        // Game variables
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const setupScreen = document.getElementById('setupScreen');
-        const gameOverScreen = document.getElementById('gameOverScreen');
-        const endingScreen = document.getElementById('endingScreen');
-        const startButton = document.getElementById('startButton');
-        const continueButton = document.getElementById('continueButton');
-        const playAgainButton = document.getElementById('playAgainButton');
-        
-        // Preview elements
-        const previewMan = document.getElementById('previewMan');
-        const previewCow = document.getElementById('previewCow');
-        
-        // Game state
-        let gameRunning = false;
-        
-        // Vibration state for man
-        let vibrationOffset = {x: 0, y: 0};
-        let vibrationIntensity = 2; // Increased from default 1 to 2 for stronger vibration
-        let vibrationPhase = 0;
-        
-        // Function to draw a simple pixel-style man on preview
-        function drawManPreview() {
-            // Create canvas element for man
-            const manCanvas = document.createElement('canvas');
-            manCanvas.width = 24;
-            manCanvas.height = 24;
-            const manCtx = manCanvas.getContext('2d');
-            
-            // Body
-            manCtx.fillStyle = '#4169E1'; // Royal blue
-            manCtx.fillRect(0, 4, 24, 20);
-            
-            // Head
-            manCtx.fillStyle = '#FFD700'; // Gold
-            manCtx.fillRect(7, 0, 10, 8);
-            
-            // Legs
-            manCtx.fillStyle = '#4169E1';
-            manCtx.fillRect(3, 16, 6, 8);
-            manCtx.fillRect(15, 16, 6, 8);
-            
-            previewMan.innerHTML = '';
-            previewMan.appendChild(manCanvas);
-        }
-        
-        // Function to draw a simple pixel-style cow on preview (now white with black spots)
-        function drawCowPreview() {
-            // Create canvas element for cow
-            const cowCanvas = document.createElement('canvas');
-            cowCanvas.width = 32;
-            cowCanvas.height = 32;
-            const cowCtx = cowCanvas.getContext('2d');
-            
-            // Body - now white
-            cowCtx.fillStyle = '#FFFFFF'; // White
-            cowCtx.fillRect(0, 4, 32, 28);
-            
-            // Spots - now black
-            cowCtx.fillStyle = '#000000'; // Black
-            cowCtx.fillRect(4, 8, 8, 8);
-            cowCtx.fillRect(20, 20, 6, 6);
-            
-            // Head - now white
-            cowCtx.fillStyle = '#FFFFFF';
-            cowCtx.fillRect(0, 0, 24, 12);
-            
-            // Head spots
-            cowCtx.fillStyle = '#000000';
-            cowCtx.fillRect(3, 2, 4, 4);
-            cowCtx.fillRect(15, 3, 3, 3);
-            
-            // Legs - now white
-            cowCtx.fillRect(2, 24, 5, 8);
-            cowCtx.fillRect(25, 24, 5, 8);
-            
-            // Leg details (black)
-            cowCtx.fillStyle = '#000000';
-            cowCtx.fillRect(2, 30, 5, 2);
-            cowCtx.fillRect(25, 30, 5, 2);
-            
-            previewCow.innerHTML = '';
-            previewCow.appendChild(cowCanvas);
-        }
-        
-        // Initialize previews
-        drawManPreview();
-        drawCowPreview();
-
-        // Full-screen canvas resize function
-        function resizeCanvas() {
-            // Get full viewport dimensions
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            
-            // Set canvas to full viewport size
-            canvas.width = width;
-            canvas.height = height;
-            
-            // Update man and cow positions if game is running
-            if (gameRunning) {
-                man.x = width / 2;
-                man.y = height / 2;
-                man.targetX = width / 2;
-                man.targetY = height / 2;
-                
-                cow.x = width / 4;
-                cow.y = height / 4;
-            }
-        }
-        
-        // Initialize canvas size
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        window.addEventListener('orientationchange', function() {
-            // Small delay to ensure orientation change is complete
-            setTimeout(resizeCanvas, 100);
-        });
-        
-        // Man (player) properties
-        const man = {
-            x: canvas.width / 2,
-            y: canvas.height / 2,
-            width: 30,
-            height: 30,
-            speed: 5,
-            targetX: canvas.width / 2,
-            targetY: canvas.height / 2
-        };
-        
-        // Cow properties
-        const cow = {
-            x: canvas.width / 4,
-            y: canvas.height / 4,
-            width: 40,
-            height: 40,
-            speed: 2 // Slower than man
-        };
-        
-        // Check if man is stationary (close to target)
-        function isManStationary() {
-            const dx = man.targetX - man.x;
-            const dy = man.targetY - man.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            return distance < 2; // Consider stationary if within 2 pixels of target
-        }
-        
-        // Update vibration effect
-        function updateVibration() {
-            if (isManStationary()) {
-                // Increase vibration intensity for stronger effect
-                vibrationIntensity = 3; // Even stronger vibration when stationary
-                
-                // Create random vibration pattern
-                vibrationPhase += 0.3;
-                vibrationOffset.x = Math.sin(vibrationPhase) * vibrationIntensity;
-                vibrationOffset.y = Math.cos(vibrationPhase * 1.3) * vibrationIntensity;
-            } else {
-                // Reduce vibration when moving
-                vibrationIntensity = 1;
-                vibrationPhase += 0.1;
-                vibrationOffset.x = Math.sin(vibrationPhase) * vibrationIntensity;
-                vibrationOffset.y = Math.cos(vibrationPhase * 1.3) * vibrationIntensity;
-            }
-        }
-        
-        // Draw a simple pixel-style man with vibration effect
-        function drawMan() {
-            // Apply vibration offset
-            const drawX = man.x + vibrationOffset.x;
-            const drawY = man.y + vibrationOffset.y;
-            
-            ctx.fillStyle = '#4169E1'; // Royal blue
-            
-            // Body
-            ctx.fillRect(drawX - man.width/2, drawY - man.height/2, man.width, man.height);
-            
-            // Head
-            ctx.fillStyle = '#FFD700'; // Gold
-            ctx.fillRect(drawX - 10, drawY - man.height/2 - 15, 20, 15);
-            
-            // Legs
-            ctx.fillStyle = '#4169E1';
-            ctx.fillRect(drawX - 12, drawY + man.height/2 - 5, 8, 10);
-            ctx.fillRect(drawX + 4, drawY + man.height/2 - 5, 8, 10);
-        }
-        
-        // Draw a simple pixel-style cow (now white with black spots)
-        function drawCow() {
-            ctx.fillStyle = '#FFFFFF'; // White body
-            
-            // Body
-            ctx.fillRect(cow.x - cow.width/2, cow.y - cow.height/2, cow.width, cow.height);
-            
-            // Spots - now black
-            ctx.fillStyle = '#000000'; // Black spots
-            ctx.fillRect(cow.x - cow.width/2 + 5, cow.y - cow.height/2 + 5, 10, 10);
-            ctx.fillRect(cow.x + cow.width/2 - 15, cow.y + cow.height/2 - 15, 8, 8);
-            
-            // Head - white
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(cow.x - 15, cow.y - cow.height/2 - 10, 30, 15);
-            
-            // Head details - black
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(cow.x - 12, cow.y - cow.height/2 - 8, 6, 6);
-            ctx.fillRect(cow.x + 2, cow.y - cow.height/2 - 7, 4, 4);
-            
-            // Legs - white
-            ctx.fillStyle = '#FFFFFF';
-            ctx.fillRect(cow.x - 17, cow.y + cow.height/2 - 5, 7, 12);
-            ctx.fillRect(cow.x + 10, cow.y + cow.height/2 - 5, 7, 12);
-            
-            // Leg details - black
-            ctx.fillStyle = '#000000';
-            ctx.fillRect(cow.x - 17, cow.y + cow.height/2 + 5, 7, 2);
-            ctx.fillRect(cow.x + 10, cow.y + cow.height/2 + 5, 7, 2);
-        }
-        
-        // Move man towards target position
-        function moveMan() {
-            // Calculate distance to target
-            const dx = man.targetX - man.x;
-            const dy = man.targetY - man.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // If not at target, move toward it
-            if (distance > 1) {
-                man.x += (dx / distance) * man.speed;
-                man.y += (dy / distance) * man.speed;
-            }
-        }
-        
-        // Move cow towards man
-        function moveCow() {
-            // Calculate direction to man
-            const dx = man.x - cow.x;
-            const dy = man.y - cow.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // Move cow toward man at its speed
-            if (distance > 0) {
-                cow.x += (dx / distance) * cow.speed;
-                cow.y += (dy / distance) * cow.speed;
-            }
-        }
-        
-        // Check collision between man and cow
-        function checkCollision() {
-            const dx = man.x - cow.x;
-            const dy = man.y - cow.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // Collision if distance is less than sum of half widths
-            return distance < (man.width/2 + cow.width/2);
-        }
-        
-        // Main game loop
-        function gameLoop() {
-            if (!gameRunning) return;
-            
-            // Update vibration effect
-            updateVibration();
-            
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw field details (simple grass pattern)
-            ctx.fillStyle = '#7cb342';
-            for (let i = 0; i < canvas.width; i += 40) {
-                for (let j = 0; j < canvas.height; j += 40) {
-                    if ((i + j) % 80 === 0) {
-                        ctx.fillRect(i, j, 20, 10);
-                    }
-                }
-            }
-            
-            // Update game objects
-            moveMan();
-            moveCow();
-            
-            // Check for collision
-            if (checkCollision()) {
-                gameRunning = false;
-                // Show game over screen instead of ending screen directly
-                gameOverScreen.style.display = 'flex';
-                return;
-            }
-            
-            // Draw game objects
-            drawCow();
-            drawMan();
-            
-            // Continue game loop
-            requestAnimationFrame(gameLoop);
-        }
-        
-        // Handle mouse clicks/touches
-        function handleInput(e) {
-            if (!gameRunning) return;
-            
-            // Prevent default behavior for touch events
-            if (e.type.startsWith('touch')) {
-                e.preventDefault();
-            }
-            
-            // Get position relative to canvas
-            const rect = canvas.getBoundingClientRect();
-            let x, y;
-            
-            if (e.type.startsWith('touch')) {
-                x = e.touches[0].clientX - rect.left;
-                y = e.touches[0].clientY - rect.top;
-            } else {
-                x = e.clientX - rect.left;
-                y = e.clientY - rect.top;
-            }
-            
-            // Set man's target position
-            man.targetX = x;
-            man.targetY = y;
-        }
-        
-        // Handle mouse drag
-        function handleDrag(e) {
-            if (!gameRunning) return;
-            
-            // Only move if mouse is pressed
-            if (e.buttons === 1) {
-                handleInput(e);
-            }
-        }
-        
-        // Start game function
-        function startGame() {
-            setupScreen.style.display = 'none';
-            gameOverScreen.style.display = 'none';
-            endingScreen.style.display = 'none';
-
-            // Reset positions
-            const width = canvas.width;
-            const height = canvas.height;
-            man.x = width / 2;
-            man.y = height / 2;
-            man.targetX = width / 2;
-            man.targetY = height / 2;
-
-            cow.x = width / 4;
-            cow.y = height / 4;
-
-            // Start game
-            gameRunning = true;
-            gameLoop();
-        }
-        
-        // Continue to ending screen
-        function showEndingScreen() {
-            gameOverScreen.style.display = 'none';
-            endingScreen.style.display = 'flex';
-            endingScreen.classList.add('fade-in');
-        }
-        
-        // Restart game
-        function restartGame() {
-            endingScreen.style.display = 'none';
-            setupScreen.style.display = 'flex';
-            setupScreen.classList.add('fade-in');
-        }
-        
-        // Event listeners
-        startButton.addEventListener('click', function() {
-            startGame();
-        });
-        continueButton.addEventListener('click', showEndingScreen);
-        playAgainButton.addEventListener('click', restartGame);
-        
-        // Mouse events
-        canvas.addEventListener('mousedown', handleInput);
-        canvas.addEventListener('mousemove', handleDrag);
-        
-        // Touch events
-        canvas.addEventListener('touchstart', handleInput, { passive: false });
-        canvas.addEventListener('touchmove', handleInput, { passive: false });
-        
-        // Handle visibility change (pause game when tab is not active)
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // Game is in background, pause it
-                gameRunning = false;
-            } else {
-                // Game is back in foreground, resume if it was running
-                if (!gameOverScreen.style.display.includes('flex') && !endingScreen.style.display.includes('flex')) {
-                    gameRunning = true;
-                    gameLoop();
-                }
-            }
-        });
-    </script>
+    <!-- Game Scripts -->
+    <script src="js/nostr.js" type="module"></script>
+    <script src="js/game-config.js"></script>
+    <script src="js/graphics.js"></script>
+    <script src="js/controls.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/game-engine.js"></script>
 </body>
 </html>
