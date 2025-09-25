@@ -3,8 +3,8 @@ import { ApplesauceRelayPool, NostrClientTransport } from "@contextvm/sdk";
 import { PrivateKeySigner } from "@contextvm/sdk";
 
 // --- Configuration ---
-// IMPORTANT: Replace with the server's public key from the server output
-const SERVER_PUBKEY = "81844e7366dc32a566adf54547aa80ceb20bbfdc6c62c4f9b7a0e8f2f2551cbc";
+// Server pubkey is provided at runtime via window.CVM_SERVER_PUBKEY
+const SERVER_PUBKEY: string = (typeof window !== 'undefined' && (window as any).CVM_SERVER_PUBKEY) || "";
 
 // IMPORTANT: Player private key (hex). Prefer runtime player key when available.
 // If window.getPlayer exists (from js/nostr.js), use that session key.
@@ -18,6 +18,10 @@ const RELAYS = [
 
 // --- Main Client Logic ---
 async function main() {
+  if (!SERVER_PUBKEY) {
+    console.warn("CVM server pubkey not configured (window.CVM_SERVER_PUBKEY). Skipping connect.");
+    return;
+  }
   // 1. Setup Signer and Relay Pool
   const signer = new PrivateKeySigner(CLIENT_PRIVATE_KEY_HEX);
   const relayPool = new ApplesauceRelayPool(RELAYS);

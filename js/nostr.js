@@ -99,23 +99,12 @@ function renderKeys(player) {
   container.appendChild(note);
 }
 
-function renderPlayerSummary(player) {
-  const el = document.getElementById('playerSummary');
-  if (!el) return;
-  const initials = player.initials || 'P21';
-  const score = Number(player.score || 0);
-  const games = Number(player.games_played || 0);
-  el.innerHTML = `
-    <div>Player: ${initials}</div>
-    <div>Score: ${score} Sats</div>
-    <div>Games Played: ${games}</div>
-  `;
-}
+// renderPlayerSummary is defined later with stricter visibility rules
 
 async function initNostrSession() {
   try {
     const player = await ensurePlayer();
-    renderKeys(player);
+    setupKeysModal(player);
     renderPlayerSummary(player);
     // Signal that the player is ready for other modules
     try {
@@ -147,4 +136,62 @@ if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initNostrSession);
 } else {
   initNostrSession();
+}
+
+// New: keys modal and updated summary rendering
+function setupKeysModal(player) {
+  const openBtn = document.getElementById('showKeysBtn');
+  const modal = document.getElementById('keysModal');
+  const closeBtn = document.getElementById('keysModalClose');
+  const npubEl = document.getElementById('keysModalNpub');
+  const nsecEl = document.getElementById('keysModalNsec');
+  const toggleBtn = document.getElementById('keysModalToggle');
+  if (!modal || !openBtn || !closeBtn || !npubEl || !nsecEl || !toggleBtn) return;
+
+  let revealed = false;
+  function maskedNsecText(nsec) {
+    return 'nsec: ' + '•'.repeat(Math.max(16, String(nsec).length));
+  }
+
+  function render() {
+    npubEl.textContent = `npub: ${player.npub}`;
+    nsecEl.textContent = revealed ? `nsec: ${player.nsec}` : maskedNsecText(player.nsec);
+    toggleBtn.textContent = revealed ? 'Hide' : 'Reveal';
+  }
+
+  render();
+
+  openBtn.onclick = () => {
+    render();
+    modal.style.display = 'flex';
+  };
+  closeBtn.onclick = () => {
+    modal.style.display = 'none';
+  };
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+  toggleBtn.onclick = () => {
+    revealed = !revealed;
+    render();
+  };
+}
+
+// Override: Only show stats if initials exist and at least one game played
+function renderPlayerSummary(player) {
+  const el = document.getElementById('playerSummary');
+  if (!el) return;
+  const hasStats = !!player.initials && Number(player.games_played || 0) > 0;
+  if (!hasStats) {
+    el.innerHTML = '';
+    return;
+  }
+  const initials = player.initials;
+  const score = Number(player.score || 0);
+  const games = Number(player.games_played || 0);
+  el.innerHTML = `
+    <div>Player: ${initials}</div>
+    <div>Score: ${score} Sats</div>
+    <div>Games Played: ${games}</div>
+  `;
 }

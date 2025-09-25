@@ -1,7 +1,7 @@
 // Browser MCP over Nostr client that uses the player's private key
 // Requires: js/nostr.js to have initialized a session player
 
-const SERVER_PUBKEY = "81844e7366dc32a566adf54547aa80ceb20bbfdc6c62c4f9b7a0e8f2f2551cbc";
+const SERVER_PUBKEY = window.CVM_SERVER_PUBKEY || "";
 const RELAYS = [
   "wss://relay.contextvm.org",
   "wss://cvm.otherstuff.ai",
@@ -117,6 +117,11 @@ async function fetchLeaderboardWithPlayerKey() {
       }
     }
     const priv = player?.privkey;
+
+    if (!SERVER_PUBKEY) {
+      console.warn("CVM server pubkey not configured (window.CVM_SERVER_PUBKEY). Skipping leaderboard fetch.");
+      return;
+    }
 
     const { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner } = await loadDeps();
 
