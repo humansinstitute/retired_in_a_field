@@ -7,6 +7,13 @@ const GameEngine = {
     // Game state
     gameRunning: false,
     
+    // Speed scaling state for the cow
+    speedScaling: {
+        intervalMs: 3000, // every 3 seconds
+        factor: 1.21,      // increase by 21%
+        lastIncreaseAt: 0  // timestamp via performance.now()
+    },
+    
     // Game objects
     man: {
         x: 0,
@@ -81,6 +88,8 @@ const GameEngine = {
                 const shouldResume = UI.handleVisibilityChange(true, this.gameRunning);
                 if (shouldResume && !UI.isAnyScreenVisible()) {
                     this.gameRunning = true;
+                    // Prevent catching up increases during background time
+                    this.speedScaling.lastIncreaseAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
                     this.gameLoop();
                 }
             }
@@ -114,6 +123,8 @@ const GameEngine = {
 
         // Start the game
         this.gameRunning = true;
+        // Initialize speed scaling timer at game start
+        this.speedScaling.lastIncreaseAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         this.gameLoop();
     },
 
@@ -273,6 +284,18 @@ const GameEngine = {
     gameLoop() {
         if (!this.gameRunning) return;
         
+        // Apply timed cow speed increases
+        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        const elapsedSinceLast = now - this.speedScaling.lastIncreaseAt;
+        if (elapsedSinceLast >= this.speedScaling.intervalMs) {
+            const steps = Math.floor(elapsedSinceLast / this.speedScaling.intervalMs);
+            // Multiply once by factor^steps to avoid incremental rounding
+            const before = this.cow.speed;
+            this.cow.speed *= Math.pow(this.speedScaling.factor, steps);
+            try { console.log(`[CowSpeed] +${steps} step(s): ${before.toFixed(3)} -> ${this.cow.speed.toFixed(3)}`); } catch (_) {}
+            this.speedScaling.lastIncreaseAt += steps * this.speedScaling.intervalMs;
+        }
+        
         // Update vibration effect
         Graphics.updateVibration(this.isManStationary());
         
@@ -281,7 +304,19 @@ const GameEngine = {
         
         // Draw field background
         Graphics.drawField();
-        
+
+        // Debug HUD: show cow speed (temporary to verify scaling)
+        try {
+            const ctx = Graphics && Graphics.ctx;
+            if (ctx) {
+                ctx.save();
+                ctx.font = '14px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.fillText(`Cow speed: ${this.cow.speed.toFixed(2)}`, 12, 22);
+                ctx.restore();
+            }
+        } catch (_) {}
+
         // Update game objects
         this.moveMan();
         this.moveCow();
@@ -326,6 +361,8 @@ const GameEngine = {
         if (!UI.isAnyScreenVisible()) {
             this.gameRunning = true;
             Controls.setGameRunning(true);
+            // Prevent catching up increases during paused time
+            this.speedScaling.lastIncreaseAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
             this.gameLoop();
         }
     },
