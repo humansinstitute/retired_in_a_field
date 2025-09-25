@@ -373,32 +373,58 @@
             <div id="nostrKeys" style="max-width: 640px; margin-top: 12px; color: var(--text-secondary); font-size: 0.9rem; word-break: break-all;">
                 <!-- Nostr keys will appear here -->
             </div>
+            <div id="leaderboard" style="max-width:640px; margin:12px auto 0; padding:10px; border-top:1px solid var(--border-primary);">
+                <div id="leaderboardStatus" style="display:flex; align-items:center; gap:8px; color: var(--text-secondary);">
+                    <span class="spinner" style="width:14px; height:14px; border:2px solid var(--border-primary); border-top-color:transparent; border-radius:50%; display:inline-block; animation: spin 0.9s linear infinite;"></span>
+                    <span>Leaderboard loading…</span>
+                </div>
+                <div id="leaderboardList" style="margin-top:8px;"></div>
+            </div>
         </div>
         
-        <!-- Game Over Screen -->
+        <!-- Combined End Screen -->
         <div id="gameOverScreen" class="screen">
             <h1>Gotcha!</h1>
             <p>Oh no! The cow has caught you!</p>
-            <p>Its not easy to be a retired in a field.</p>
+            <p>It's not easy to be a retired in a field.</p>
             <p>The more you practice the more you'll climb up the leaderboard!</p>
-            <button id="continueButton" class="btn">Continue</button>
-        </div>
-        
-        <!-- Ending Screen -->
-        <div id="endingScreen" class="screen">
-            <h1>Game Complete</h1>
-            <p>Thank you for playing!</p>
             <p id="scoreMessage">You have scored 21 sats!</p>
             <div id="cashAmount">Your money goes towards supporting Nostr Devs!</div>
             <button id="playAgainButton" class="btn">Play Again</button>
+        </div>
+
+        <!-- Initials Screen -->
+        <div id="initialsScreen" class="screen" style="display: none;">
+            <h1>Enter Your Initials</h1>
+            <p style="margin-bottom:12px;">Tap arrows to set 3 characters</p>
+            <div id="initialsPicker" style="display:flex; gap:16px; align-items:center; justify-content:center; margin: 8px 0 16px;">
+                <div class="picker-col" data-index="0" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <button class="picker-up" style="font-size:24px; width:48px; height:40px;">▲</button>
+                    <div class="picker-char" id="pickerChar0" style="font-size:32px; font-weight:700; width:60px; height:48px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-primary); border-radius:8px; background:var(--bg-secondary);">A</div>
+                    <button class="picker-down" style="font-size:24px; width:48px; height:40px;">▼</button>
+                </div>
+                <div class="picker-col" data-index="1" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <button class="picker-up" style="font-size:24px; width:48px; height:40px;">▲</button>
+                    <div class="picker-char" id="pickerChar1" style="font-size:32px; font-weight:700; width:60px; height:48px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-primary); border-radius:8px; background:var(--bg-secondary);">A</div>
+                    <button class="picker-down" style="font-size:24px; width:48px; height:40px;">▼</button>
+                </div>
+                <div class="picker-col" data-index="2" style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <button class="picker-up" style="font-size:24px; width:48px; height:40px;">▲</button>
+                    <div class="picker-char" id="pickerChar2" style="font-size:32px; font-weight:700; width:60px; height:48px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-primary); border-radius:8px; background:var(--bg-secondary);">A</div>
+                    <button class="picker-down" style="font-size:24px; width:48px; height:40px;">▼</button>
+                </div>
+            </div>
+            <button id="initialsContinueButton" class="btn" style="min-width:240px;">Continue</button>
         </div>
     </div>
 
     <!-- Game Scripts -->
     <script src="js/nostr.js" type="module"></script>
+    <script src="js/cvm-client.browser.js" type="module"></script>
     <script src="js/game-config.js"></script>
     <script src="js/graphics.js"></script>
     <script src="js/controls.js"></script>
+    <script src="js/initials.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/game-engine.js"></script>
 </body>

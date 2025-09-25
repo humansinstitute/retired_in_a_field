@@ -8,20 +8,23 @@ const UI = {
     screens: {
         setup: null,
         gameOver: null,
-        ending: null
+        ending: null,
+        initials: null
     },
     
     // Button elements
     buttons: {
         start: null,
         continue: null,
-        playAgain: null
+        playAgain: null,
+        initialsContinue: null
     },
     
     // Callback functions
     onStartGame: null,
     onContinue: null,
     onPlayAgain: null,
+    onInitialsConfirm: null,
 
     /**
      * Initialize the UI module
@@ -30,6 +33,7 @@ const UI = {
         this.onStartGame = callbacks.onStartGame || null;
         this.onContinue = callbacks.onContinue || null;
         this.onPlayAgain = callbacks.onPlayAgain || null;
+        this.onInitialsConfirm = callbacks.onInitialsConfirm || null;
         
         this.setupElements();
         this.setupEventListeners();
@@ -44,11 +48,13 @@ const UI = {
         this.screens.setup = document.getElementById('setupScreen');
         this.screens.gameOver = document.getElementById('gameOverScreen');
         this.screens.ending = document.getElementById('endingScreen');
+        this.screens.initials = document.getElementById('initialsScreen');
         
         // Button elements
         this.buttons.start = document.getElementById('startButton');
         this.buttons.continue = document.getElementById('continueButton');
         this.buttons.playAgain = document.getElementById('playAgainButton');
+        this.buttons.initialsContinue = document.getElementById('initialsContinueButton');
     },
 
     /**
@@ -63,18 +69,20 @@ const UI = {
             });
         }
         
-        if (this.buttons.continue) {
-            this.buttons.continue.addEventListener('click', () => {
-                if (this.onContinue) {
-                    this.onContinue();
-                }
-            });
-        }
+        // No separate continue button in combined end screen
         
         if (this.buttons.playAgain) {
             this.buttons.playAgain.addEventListener('click', () => {
                 if (this.onPlayAgain) {
                     this.onPlayAgain();
+                }
+            });
+        }
+
+        if (this.buttons.initialsContinue) {
+            this.buttons.initialsContinue.addEventListener('click', () => {
+                if (this.onInitialsConfirm) {
+                    this.onInitialsConfirm();
                 }
             });
         }
@@ -144,8 +152,11 @@ const UI = {
     /**
      * Show the ending screen
      */
-    showEndingScreen() {
-        this.showScreen('ending', true);
+    // Ending screen removed in combined flow
+
+    /** Show initials screen */
+    showInitialsScreen() {
+        this.showScreen('initials', true);
     },
 
     /**

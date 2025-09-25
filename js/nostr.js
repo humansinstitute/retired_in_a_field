@@ -51,7 +51,7 @@ async function ensurePlayer() {
     privkey: bytesToHex(sk),
     score: 0,
     games_played: 0,
-    initials: 'P21'
+    initials: null
   };
   PlayerStore.set(player);
   return player;
@@ -117,6 +117,16 @@ async function initNostrSession() {
     const player = await ensurePlayer();
     renderKeys(player);
     renderPlayerSummary(player);
+    // Signal that the player is ready for other modules
+    try {
+      window.playerReady = true;
+      if (!window.whenPlayerReadyResolve) {
+        window.whenPlayerReady = new Promise(resolve => (window.whenPlayerReadyResolve = resolve));
+      }
+      window.whenPlayerReadyResolve(player);
+      const evt = new CustomEvent('player-ready', { detail: { player } });
+      window.dispatchEvent(evt);
+    } catch (_) {}
   } catch (err) {
     const container = document.getElementById('nostrKeys');
     if (container) container.textContent = 'Failed to initialize Nostr session.';

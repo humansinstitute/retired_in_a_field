@@ -63,8 +63,8 @@ const GameEngine = {
         // Initialize UI module
         UI.init({
             onStartGame: () => this.startGame(),
-            onContinue: () => this.showEndingScreen(),
-            onPlayAgain: () => this.restartGame()
+            onPlayAgain: () => this.restartGame(),
+            onInitialsConfirm: () => this.confirmInitialsAndStart()
         });
     },
     
@@ -91,18 +91,42 @@ const GameEngine = {
      * Start a new game
      */
     startGame() {
+        // If initials are not set, route to initials screen
+        try {
+            const p = window.getPlayer ? window.getPlayer() : null;
+            if (!p || !p.initials) {
+                if (window.InitialsUI && window.InitialsUI.initInitialsUI) {
+                    window.InitialsUI.initInitialsUI();
+                }
+                UI.showInitialsScreen();
+                return;
+            }
+        } catch (_) {}
+
         // Hide all UI screens
         UI.showGameScreen();
-        
+
         // Reset game objects to initial positions
         this.resetGameObjects();
-        
+
         // Update controls state
         Controls.setGameRunning(true);
-        
+
         // Start the game
         this.gameRunning = true;
         this.gameLoop();
+    },
+
+    confirmInitialsAndStart() {
+        try {
+            if (window.InitialsUI && window.updatePlayer) {
+                const initials = window.InitialsUI.getInitials();
+                const p = window.updatePlayer({ initials });
+                if (window.renderPlayerSummary) window.renderPlayerSummary(p);
+            }
+        } catch (_) {}
+        // Then start the game normally
+        this.startGame();
     },
     
     /**
@@ -195,32 +219,21 @@ const GameEngine = {
     gameOver() {
         this.gameRunning = false;
         Controls.setGameRunning(false);
-        UI.showGameOverScreen();
-        // Increment games played and update summary
+        // Increment games played and score, update summary
         try {
             if (window.updatePlayer) {
+                const current = window.getPlayer() || {};
                 const p = window.updatePlayer({
-                    games_played: (window.getPlayer()?.games_played || 0) + 1
+                    games_played: (current.games_played || 0) + 1,
+                    score: (current.score || 0) + 21
                 });
                 if (window.renderPlayerSummary) window.renderPlayerSummary(p);
             }
         } catch (_) {}
+        UI.showGameOverScreen();
     },
     
-    /**
-     * Show ending screen
-     */
-    showEndingScreen() {
-        // Increment score by 21 at the end of a game
-        try {
-            if (window.updatePlayer) {
-                const current = window.getPlayer() || {};
-                const p = window.updatePlayer({ score: (current.score || 0) + 21 });
-                if (window.renderPlayerSummary) window.renderPlayerSummary(p);
-            }
-        } catch (_) {}
-        UI.showEndingScreen();
-    },
+    // Combined flow: no separate ending screen
     
     /**
      * Restart the game
