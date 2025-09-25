@@ -156,7 +156,8 @@ function setupKeysModal(player) {
   function render() {
     npubEl.textContent = `npub: ${player.npub}`;
     nsecEl.textContent = revealed ? `nsec: ${player.nsec}` : maskedNsecText(player.nsec);
-    toggleBtn.textContent = revealed ? 'Hide' : 'Reveal';
+    toggleBtn.textContent = revealed ? '🙈' : '👁';
+    toggleBtn.setAttribute('aria-label', revealed ? 'Hide private key' : 'Reveal private key');
   }
 
   render();

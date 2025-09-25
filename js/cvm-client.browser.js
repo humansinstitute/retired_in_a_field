@@ -89,6 +89,23 @@ function renderLeaderboard(items) {
   tagline.style.marginBottom = '8px';
   list.appendChild(tagline);
 
+  // Local player quick stats (one line)
+  try {
+    const p = (window.getPlayer && window.getPlayer()) || {};
+    const initials = (p.initials || '').toString().toUpperCase();
+    const games = Number(p.games_played || 0);
+    const score = Number(p.score || 0);
+    if (initials || games || score) {
+      const quick = document.createElement('div');
+      quick.id = 'leaderboardPlayerStats';
+      quick.style.color = 'var(--text-tertiary)';
+      quick.style.fontSize = '0.9rem';
+      quick.style.margin = '-2px 0 8px 0';
+      quick.textContent = `${initials || '—'} | played: ${games} | score: ${score}`;
+      list.appendChild(quick);
+    }
+  } catch (_) {}
+
   // Header row
   const header = document.createElement('div');
   header.style.display = 'grid';
@@ -132,7 +149,7 @@ function renderLeaderboard(items) {
     const npub = document.createElement('div');
     const np = typeof it.npub === 'string' && it.npub.length > 0 ? it.npub : '';
     const npSuffix = np ? np.slice(-6) : '';
-    npub.textContent = npSuffix;
+    npub.textContent = npSuffix ? ('...' + npSuffix) : '';
     npub.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace';
     npub.style.opacity = '0.85';
 
