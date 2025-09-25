@@ -361,8 +361,12 @@
                 <!-- Cow on the right -->
                 <div class="preview-character preview-cow" id="previewCow"></div>
             </div>
+            <!-- Top bar with hamburger menu -->
+            <button id="menuButton" aria-label="Menu" style="position:absolute; top:12px; left:12px; width:40px; height:40px; border-radius:8px; background: var(--bg-secondary); border:1px solid var(--border-primary); color: var(--text-primary); display:flex; align-items:center; justify-content:center; box-shadow: var(--shadow-sm);">
+              <span style="font-size:20px; line-height:1;">☰</span>
+            </button>
+
             <h1>Retired in a Field</h1>
-            <div id="playerSummary" style="margin: 6px 0 10px; color: var(--text-secondary); font-weight: 500;"></div>
             <p>In the Age of AI, we'll end up reitred in a field.<br />So lets get a little practice in now and raise money for nostr devs</p>
             
             <!-- Cashu Token Input -->
@@ -370,10 +374,6 @@
             <div id="cashuTokenError" style="color:#dc2626; font-size:0.9rem; display:none; max-width:320px;">Token must start with "cashu".</div>
             
             <button id="startButton" class="btn">Start Game</button>
-            <button id="showKeysBtn" class="btn" style="margin-left: 8px; background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border-primary);">Show Keys</button>
-            <div id="nostrKeys" style="max-width: 640px; margin-top: 12px; color: var(--text-secondary); font-size: 0.9rem; word-break: break-all;">
-                <!-- Nostr keys will appear here -->
-            </div>
             <div id="leaderboard" style="max-width:640px; margin:12px auto 0; padding:10px; border-top:1px solid var(--border-primary);">
                 <div id="leaderboardStatus" style="display:flex; align-items:center; gap:8px; color: var(--text-secondary);">
                     <span class="spinner" style="width:14px; height:14px; border:2px solid var(--border-primary); border-top-color:transparent; border-radius:50%; display:inline-block; animation: spin 0.9s linear infinite;"></span>
@@ -420,6 +420,30 @@
     </div>
 
     <!-- Game Scripts -->
+    <!-- Options Menu Modal -->
+    <div id="optionsModal" style="display:none; position:fixed; inset:0; background: rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
+      <div style="background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-primary); border-radius: 10px; padding: 16px; width: min(92vw, 400px); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="font-weight:700; font-size:1.1rem;">Options</div>
+          <button id="optionsModalClose" class="btn" style="background: var(--bg-secondary); border:1px solid var(--border-primary);">Close</button>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button id="optionsShowKeys" class="btn" style="width:100%;">Show Keys</button>
+          <button id="optionsShowStats" class="btn" style="width:100%; background: var(--bg-secondary); color: var(--text-primary); border:1px solid var(--border-primary);">My Stats</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" style="display:none; position:fixed; inset:0; background: rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
+      <div style="background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-primary); border-radius: 10px; padding: 16px; width: min(92vw, 480px); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="font-weight:700; font-size:1.1rem;">My Stats</div>
+          <button id="statsModalClose" class="btn" style="background: var(--bg-secondary); border:1px solid var(--border-primary);">Close</button>
+        </div>
+        <div id="statsModalContent" style="display:grid; row-gap:6px; color: var(--text-secondary);"></div>
+      </div>
+    </div>
     <!-- Keys Modal -->
     <div id="keysModal" style="display:none; position:fixed; inset:0; background: rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:1000;">
       <div style="background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-primary); border-radius: 10px; padding: 16px; width: min(92vw, 560px); box-shadow: 0 10px 30px rgba(0,0,0,0.2);">

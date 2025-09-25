@@ -140,13 +140,12 @@ if (document.readyState === 'loading') {
 
 // New: keys modal and updated summary rendering
 function setupKeysModal(player) {
-  const openBtn = document.getElementById('showKeysBtn');
   const modal = document.getElementById('keysModal');
   const closeBtn = document.getElementById('keysModalClose');
   const npubEl = document.getElementById('keysModalNpub');
   const nsecEl = document.getElementById('keysModalNsec');
   const toggleBtn = document.getElementById('keysModalToggle');
-  if (!modal || !openBtn || !closeBtn || !npubEl || !nsecEl || !toggleBtn) return;
+  if (!modal || !closeBtn || !npubEl || !nsecEl || !toggleBtn) return;
 
   let revealed = false;
   function maskedNsecText(nsec) {
@@ -161,7 +160,8 @@ function setupKeysModal(player) {
 
   render();
 
-  openBtn.onclick = () => {
+  // Expose a global opener used by the options menu
+  window.openKeysModal = () => {
     render();
     modal.style.display = 'flex';
   };
@@ -179,7 +179,7 @@ function setupKeysModal(player) {
 
 // Override: Only show stats if initials exist and at least one game played
 function renderPlayerSummary(player) {
-  const el = document.getElementById('playerSummary');
+  const el = document.getElementById('statsModalContent');
   if (!el) return;
   const hasStats = !!player.initials && Number(player.games_played || 0) > 0;
   if (!hasStats) {
@@ -190,8 +190,8 @@ function renderPlayerSummary(player) {
   const score = Number(player.score || 0);
   const games = Number(player.games_played || 0);
   el.innerHTML = `
-    <div>Player: ${initials}</div>
-    <div>Score: ${score} Sats</div>
-    <div>Games Played: ${games}</div>
+    <div><strong>Player:</strong> ${initials}</div>
+    <div><strong>Score:</strong> ${score} Sats</div>
+    <div><strong>Games Played:</strong> ${games}</div>
   `;
 }

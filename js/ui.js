@@ -28,7 +28,14 @@ const UI = {
     // Misc UI elements
     els: {
         cashuError: null,
-        toastContainer: null
+        toastContainer: null,
+        optionsModal: null,
+        optionsClose: null,
+        menuButton: null,
+        optionsShowKeys: null,
+        optionsShowStats: null,
+        statsModal: null,
+        statsModalClose: null
     },
     
     // Callback functions
@@ -78,6 +85,13 @@ const UI = {
 
         // Misc elements
         this.els.cashuError = document.getElementById('cashuTokenError');
+        this.els.menuButton = document.getElementById('menuButton');
+        this.els.optionsModal = document.getElementById('optionsModal');
+        this.els.optionsClose = document.getElementById('optionsModalClose');
+        this.els.optionsShowKeys = document.getElementById('optionsShowKeys');
+        this.els.optionsShowStats = document.getElementById('optionsShowStats');
+        this.els.statsModal = document.getElementById('statsModal');
+        this.els.statsModalClose = document.getElementById('statsModalClose');
     },
 
     /**
@@ -138,6 +152,43 @@ const UI = {
                 const valid = this.validateCashuToken(token);
                 this.showCashuError(token.length > 0 && !valid);
                 this.setButtonEnabled('start', valid);
+            });
+        }
+
+        // Menu open/close
+        if (this.els.menuButton) {
+            this.els.menuButton.addEventListener('click', () => this.showOptions(true));
+        }
+        if (this.els.optionsClose) {
+            this.els.optionsClose.addEventListener('click', () => this.showOptions(false));
+        }
+        if (this.els.optionsModal) {
+            this.els.optionsModal.addEventListener('click', (e) => {
+                if (e.target === this.els.optionsModal) this.showOptions(false);
+            });
+        }
+
+        // Options actions
+        if (this.els.optionsShowKeys) {
+            this.els.optionsShowKeys.addEventListener('click', () => {
+                this.showOptions(false);
+                if (window.openKeysModal) window.openKeysModal();
+            });
+        }
+        if (this.els.optionsShowStats) {
+            this.els.optionsShowStats.addEventListener('click', () => {
+                this.showOptions(false);
+                this.showStats(true);
+            });
+        }
+
+        // Stats modal close
+        if (this.els.statsModalClose) {
+            this.els.statsModalClose.addEventListener('click', () => this.showStats(false));
+        }
+        if (this.els.statsModal) {
+            this.els.statsModal.addEventListener('click', (e) => {
+                if (e.target === this.els.statsModal) this.showStats(false);
             });
         }
     },
@@ -202,6 +253,9 @@ const UI = {
         this.showCashuError(false);
         // Disable Start until a valid token is entered
         this.setButtonEnabled('start', false);
+        // Hide any open modals
+        this.showOptions(false);
+        this.showStats(false);
     },
 
     /**
@@ -283,6 +337,21 @@ const UI = {
     showCashuError(show) {
         if (this.els.cashuError) {
             this.els.cashuError.style.display = show ? 'block' : 'none';
+        }
+    },
+
+    // Options modal visibility
+    showOptions(show) {
+        if (!this.els.optionsModal) return;
+        this.els.optionsModal.style.display = show ? 'flex' : 'none';
+    },
+
+    // Stats modal visibility (and refresh content)
+    showStats(show) {
+        if (!this.els.statsModal) return;
+        this.els.statsModal.style.display = show ? 'flex' : 'none';
+        if (show) {
+            try { if (window.renderPlayerSummary) window.renderPlayerSummary(); } catch (_) {}
         }
     },
 

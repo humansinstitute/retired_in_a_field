@@ -103,7 +103,7 @@ function renderLeaderboard(items) {
 
 function renderPlayerSummaryFromServer(data) {
   try {
-    const el = document.getElementById('playerSummary');
+    const el = document.getElementById('statsModalContent');
     if (!el) return;
     const initials = (data && data.initials) ? String(data.initials) : '';
     const score = Number(data && data.score ? data.score : 0);
@@ -113,9 +113,9 @@ function renderPlayerSummaryFromServer(data) {
       return;
     }
     el.innerHTML = `
-      <div>Player: ${initials}</div>
-      <div>Score: ${score} Sats</div>
-      <div>Games Played: ${played}</div>
+      <div><strong>Player:</strong> ${initials}</div>
+      <div><strong>Score:</strong> ${score} Sats</div>
+      <div><strong>Games Played:</strong> ${played}</div>
     `;
   } catch (_) {}
 }
