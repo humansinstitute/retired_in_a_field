@@ -7,6 +7,7 @@ const UI = {
     // Screen elements
     screens: {
         setup: null,
+        level: null,
         gameOver: null,
         ending: null,
         initials: null,
@@ -18,7 +19,10 @@ const UI = {
         start: null,
         continue: null,
         playAgain: null,
-        initialsContinue: null
+        initialsContinue: null,
+        level1: null,
+        level2: null,
+        level3: null
     },
 
     // Inputs
@@ -45,6 +49,7 @@ const UI = {
     onContinue: null,
     onPlayAgain: null,
     onInitialsConfirm: null,
+    onLevelSelect: null,
 
     // Internal flags used previously; removing to avoid blocking clicks
     _startPending: false,
@@ -58,6 +63,7 @@ const UI = {
         this.onContinue = callbacks.onContinue || null;
         this.onPlayAgain = callbacks.onPlayAgain || null;
         this.onInitialsConfirm = callbacks.onInitialsConfirm || null;
+        this.onLevelSelect = callbacks.onLevelSelect || null;
         
         this.setupElements();
         this.setupEventListeners();
@@ -76,6 +82,7 @@ const UI = {
     setupElements() {
         // Screen elements
         this.screens.setup = document.getElementById('setupScreen');
+        this.screens.level = document.getElementById('levelScreen');
         this.screens.gameOver = document.getElementById('gameOverScreen');
         this.screens.ending = document.getElementById('endingScreen');
         this.screens.initials = document.getElementById('initialsScreen');
@@ -86,6 +93,9 @@ const UI = {
         this.buttons.continue = document.getElementById('continueButton');
         this.buttons.playAgain = document.getElementById('playAgainButton');
         this.buttons.initialsContinue = document.getElementById('initialsContinueButton');
+        this.buttons.level1 = document.getElementById('levelBtn1');
+        this.buttons.level2 = document.getElementById('levelBtn2');
+        this.buttons.level3 = document.getElementById('levelBtn3');
 
         // Inputs
         this.inputs.cashuToken = document.getElementById('cashuTokenInput');
@@ -165,6 +175,17 @@ const UI = {
                 }
             });
         }
+
+        // Level buttons
+        const attachLevel = (btn, lvl) => {
+            if (!btn) return;
+            btn.addEventListener('click', () => {
+                if (this.onLevelSelect) this.onLevelSelect(lvl);
+            });
+        };
+        attachLevel(this.buttons.level1, 1);
+        attachLevel(this.buttons.level2, 2);
+        attachLevel(this.buttons.level3, 3);
 
         // Live validation for Cashu token input
         if (this.inputs.cashuToken) {
@@ -312,6 +333,20 @@ const UI = {
         // Refresh authoritative stats and leaderboard from Context VM
         try { if (window.fetchPlayerStatsWithPlayerKey) window.fetchPlayerStatsWithPlayerKey(); } catch (_) {}
         try { if (window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); } catch (_) {}
+    },
+
+    /** Show the level selection screen and enable unlocked buttons */
+    showLevelScreen(unlockedLevel = 1) {
+        this.showScreen('level', true);
+        const lock = (btn, enabled) => {
+            if (!btn) return;
+            btn.disabled = !enabled;
+            btn.classList.toggle('disabled', !enabled);
+            btn.style.opacity = enabled ? '1' : '0.5';
+        };
+        lock(this.buttons.level1, true);
+        lock(this.buttons.level2, unlockedLevel >= 2);
+        lock(this.buttons.level3, unlockedLevel >= 3);
     },
 
     /**

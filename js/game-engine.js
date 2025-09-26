@@ -8,6 +8,8 @@ const GameEngine = {
     gameRunning: false,
     // Track if game was running before tab was hidden to avoid false resumes
     wasRunningBeforeHidden: false,
+    // Level state
+    currentLevel: 1,
     
     // Speed scaling state for the cow
     speedScaling: {
@@ -73,7 +75,8 @@ const GameEngine = {
         UI.init({
             onStartGame: () => this.startGame(),
             onPlayAgain: () => this.restartGame(),
-            onInitialsConfirm: () => this.confirmInitialsAndStart()
+            onInitialsConfirm: () => this.confirmInitialsAndStart(),
+            onLevelSelect: (lvl) => this.selectLevelAndStart(lvl)
         });
     },
     
@@ -117,6 +120,60 @@ const GameEngine = {
             }
         } catch (_) {}
 
+        // Check level eligibility
+        const unlocked = this.computeUnlockedLevel();
+        if (unlocked > 1 && !this._pendingLevelSelection) {
+            this._pendingLevelSelection = true;
+            UI.showLevelScreen(unlocked);
+            return;
+        }
+
+        // Proceed to start at current or default level
+        this.beginGameAtLevel(this.currentLevel || 1);
+    },
+
+    confirmInitialsAndStart() {
+        try {
+            if (window.InitialsUI && window.updatePlayer) {
+                const initials = window.InitialsUI.getInitials();
+                const p = window.updatePlayer({ initials });
+                if (window.renderPlayerSummary) window.renderPlayerSummary(p);
+            }
+        } catch (_) {}
+        // Then start the game normally
+        this.startGame();
+    },
+
+    /**
+     * Compute highest unlocked level based on games played
+     * L1: default, L2: >=2 games, L3: >=4 games
+     */
+    computeUnlockedLevel() {
+        try {
+            // Prefer server stats if available
+            const sp = window._serverPlayer || {};
+            const playedServer = Number(sp.played || 0);
+            const playedLocal = Number((window.getPlayer ? window.getPlayer()?.games_played : 0) || 0);
+            const played = Math.max(playedServer, playedLocal);
+            // Testing config: unlock all levels after 1 game
+            if (played >= 1) return 3;
+        } catch (_) {}
+        return 1;
+    },
+
+    /** Handle selection from the level screen and begin */
+    selectLevelAndStart(level) {
+        this.currentLevel = Math.max(1, Math.min(3, Number(level || 1)));
+        this._pendingLevelSelection = false;
+        this.beginGameAtLevel(this.currentLevel);
+    },
+
+    /** Begin game with a specific level */
+    beginGameAtLevel(level) {
+        this.currentLevel = Math.max(1, Math.min(3, Number(level || 1)));
+        // Inform graphics of the level
+        try { if (Graphics && typeof Graphics.setLevel === 'function') Graphics.setLevel(this.currentLevel); } catch (_) {}
+
         // Hide all UI screens
         UI.showGameScreen();
 
@@ -131,18 +188,6 @@ const GameEngine = {
         // Initialize speed scaling timer at game start
         this.speedScaling.lastIncreaseAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         this.gameLoop();
-    },
-
-    confirmInitialsAndStart() {
-        try {
-            if (window.InitialsUI && window.updatePlayer) {
-                const initials = window.InitialsUI.getInitials();
-                const p = window.updatePlayer({ initials });
-                if (window.renderPlayerSummary) window.renderPlayerSummary(p);
-            }
-        } catch (_) {}
-        // Then start the game normally
-        this.startGame();
     },
     
     /**
@@ -263,6 +308,13 @@ const GameEngine = {
             const msg = document.getElementById('scoreMessage');
             if (msg) msg.textContent = `You have scored ${pledged} sats!`;
         } catch (_) {}
+
+        // Optimistically increment local games played so levels can unlock within session
+        try {
+            const p = window.getPlayer ? window.getPlayer() : null;
+            const gp = Number((p?.games_played || 0)) + 1;
+            if (window.updatePlayer) window.updatePlayer({ games_played: gp });
+        } catch (_) {}
         UI.showGameOverScreen();
     },
     
@@ -304,7 +356,7 @@ const GameEngine = {
         Graphics.clearCanvas();
         
         // Draw field background
-        Graphics.drawField();
+        Graphics.drawBackground();
 
         // Debug HUD: show cow speed (temporary to verify scaling)
         try {
