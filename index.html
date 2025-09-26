@@ -390,6 +390,7 @@
                 
                 <!-- Cashu Token Input -->
             <input id="cashuTokenInput" type="text" placeholder="Enter Cashu token" autocomplete="off" spellcheck="false" />
+            <div id="cashuTokenNote" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; max-width:320px;">minibits only for now, 21 min</div>
             <div id="cashuTokenError" style="color:#dc2626; font-size:0.9rem; display:none; max-width:320px;">Token must start with "cashu".</div>
             
             <button id="startButton" class="btn">Start Game</button>
@@ -461,7 +462,6 @@
         </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
           <button id="optionsShowKeys" class="btn" style="width:100%;">Show Keys</button>
-          <button id="optionsShowStats" class="btn" style="width:100%;">My Stats</button>
           <button id="optionsShowAbout" class="btn" style="width:100%;">About</button>
           <button id="optionsShowDonations" class="btn" style="width:100%;">Donations</button>
           <button id="optionsShowGame" class="btn" style="width:100%;">Game</button>
