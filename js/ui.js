@@ -207,7 +207,8 @@ const UI = {
         if (this.els.optionsShowDonations) {
             this.els.optionsShowDonations.addEventListener('click', () => {
                 this.showOptions(false);
-                this.showDonationsScreen();
+                // Open standalone donations page in a new tab/window
+                try { window.open('donations.html', '_blank', 'noopener,noreferrer'); } catch (_) {}
             });
         }
         if (this.els.optionsShowGame) {
@@ -328,6 +329,9 @@ const UI = {
     /** Show donations screen */
     showDonationsScreen() {
         this.showScreen('donations', true);
+        try {
+            if (window.loadDonationsZaps) window.loadDonationsZaps();
+        } catch (_) {}
     },
 
     /**
