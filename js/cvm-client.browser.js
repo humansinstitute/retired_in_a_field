@@ -143,7 +143,7 @@ function renderLeaderboard(items) {
     pos.style.textAlign = 'left';
 
     const init = document.createElement('div');
-    init.textContent = String(it.initials || '').toUpperCase();
+    init.textContent = String((it.initials || it.name || '')).toUpperCase() || '—';
     init.style.fontWeight = idx === 0 ? '800' : '700';
 
     const npub = document.createElement('div');
@@ -154,7 +154,12 @@ function renderLeaderboard(items) {
     npub.style.opacity = '0.85';
 
     const score = document.createElement('div');
-    score.textContent = `${Number(it.satsLost)} sats`;
+    const scoreVal = Number(
+      (typeof it.satsLost !== 'undefined') ? it.satsLost :
+      (typeof it.score !== 'undefined') ? it.score :
+      (typeof it.sats !== 'undefined') ? it.sats : 0
+    );
+    score.textContent = `${scoreVal} sats`;
     score.style.fontVariantNumeric = 'tabular-nums';
     score.style.textAlign = 'right';
 
@@ -277,18 +282,32 @@ async function fetchLeaderboardWithPlayerKey() {
 
     const leaderboardResult = await mcpClient.callTool({ name: "check_leaderboard", arguments: {} });
     console.log("Leaderboard received:", leaderboardResult);
-    // Extract JSON array from MCP result
+    // Extract JSON array from MCP result (support multiple shapes)
     let items = [];
     try {
-      const text = leaderboardResult?.content?.[0]?.text;
-      if (typeof text === 'string') {
+      const part = Array.isArray(leaderboardResult?.content) ? leaderboardResult.content[0] : null;
+      const text = part && typeof part.text === 'string' ? part.text : null;
+      if (text) {
         items = JSON.parse(text);
+      } else if (part && Array.isArray(part.json)) {
+        items = part.json;
+      } else if (Array.isArray(leaderboardResult?.items)) {
+        items = leaderboardResult.items;
       }
-    } catch (_) {}
+    } catch (e) {
+      try { console.warn('Failed to parse leaderboard payload', e); } catch (_) {}
+    }
     if (Array.isArray(items)) {
       // Sort highest satsLost first
-      items.sort((a, b) => Number(b.satsLost || 0) - Number(a.satsLost || 0));
+      const scoreOf = (it) => Number(
+        (typeof it.satsLost !== 'undefined') ? it.satsLost :
+        (typeof it.score !== 'undefined') ? it.score :
+        (typeof it.sats !== 'undefined') ? it.sats : 0
+      );
+      items.sort((a, b) => scoreOf(b) - scoreOf(a));
       renderLeaderboard(items);
+    } else {
+      try { console.warn('Leaderboard items missing or invalid'); } catch (_) {}
     }
 
     await mcpClient.close();
@@ -401,7 +420,8 @@ window.submitLeaderboardEntry = submitLeaderboardEntry;
 window.fetchPlayerStatsWithPlayerKey = fetchPlayerStatsWithPlayerKey;
 
 // Redeem a Cashu token and check access via MCP tool `cashu_access`
-async function redeemCashuAccess(encodedToken, minAmount = 21) {
+// Accepts optional `refId` (generated if omitted) for idempotency/deduping
+async function redeemCashuAccess(encodedToken, minAmount = 21, refId) {
   try {
     if (!encodedToken || typeof encodedToken !== 'string') {
       return { decision: 'ACCESS_DENIED', amount: 0, reason: 'encodedToken is required (cashu... string)', mode: 'error' };
@@ -433,7 +453,7 @@ async function redeemCashuAccess(encodedToken, minAmount = 21) {
     const mcpClient = new Client({ name: 'retired-fe-client', version: '1.0.0' });
     await mcpClient.connect(clientTransport);
 
-    const args = { encodedToken, minAmount: Number(minAmount || 21) };
+    const args = { encodedToken, minAmount: Number(minAmount || 21), refId: refId || generateRefId() };
     const result = await mcpClient.callTool({ name: 'cashu_access', arguments: args });
 
     await mcpClient.close();

@@ -37,12 +37,16 @@ const UI = {
         statsModal: null,
         statsModalClose: null
     },
-    
+
     // Callback functions
     onStartGame: null,
     onContinue: null,
     onPlayAgain: null,
     onInitialsConfirm: null,
+
+    // Internal flags used previously; removing to avoid blocking clicks
+    _startPending: false,
+    _startRefId: null,
 
     /**
      * Initialize the UI module
@@ -57,9 +61,9 @@ const UI = {
         this.setupEventListeners();
         this.setupPreviews();
 
-        // Initial state: if setup screen is visible, ensure Start is disabled
+        // Initial state: if setup screen is visible, ensure Start is enabled
         if (this.screens.setup && this.screens.setup.style.display !== 'none') {
-            this.setButtonEnabled('start', false);
+            this.setButtonEnabled('start', true);
             this.showCashuError(false);
         }
     },
@@ -107,17 +111,22 @@ const UI = {
                     this.showCashuError(true);
                     return;
                 }
+                // Create a refId for idempotency if available
+                let startRefId = null;
+                try { startRefId = (typeof window.generateRefId === 'function') ? window.generateRefId() : null; } catch (_) { startRefId = null; }
                 this.setButtonLoading('start', true);
                 try {
                     const res = (window.redeemCashuAccess)
-                        ? await window.redeemCashuAccess(token, 21)
+                        ? await window.redeemCashuAccess(token, 21, startRefId)
                         : { decision: 'ACCESS_DENIED', amount: 0, reason: 'cashu_access unavailable', mode: 'error' };
                     if (res && res.decision === 'ACCESS_GRANTED') {
                         // Save token locally and record pledged amount for this session
                         try { localStorage.setItem('cashuToken', token); } catch (_) {}
                         try {
-                            const pledged = Number(res.amount || 0);
-                            if (window.updatePlayer) window.updatePlayer({ last_pledge: pledged });
+                            const amt = Number(res.amount);
+                            if (Number.isFinite(amt) && amt > 0) {
+                                if (window.updatePlayer) window.updatePlayer({ last_pledge: amt });
+                            }
                         } catch (_) {}
                         if (this.onStartGame) this.onStartGame();
                     } else {
@@ -155,8 +164,8 @@ const UI = {
             this.inputs.cashuToken.addEventListener('input', () => {
                 const token = this.inputs.cashuToken.value.trim();
                 const valid = this.validateCashuToken(token);
+                // Show inline error, but do not disable the button entirely
                 this.showCashuError(token.length > 0 && !valid);
-                this.setButtonEnabled('start', valid);
             });
         }
 
@@ -257,8 +266,8 @@ const UI = {
             this.inputs.cashuToken.value = '';
         }
         this.showCashuError(false);
-        // Disable Start until a valid token is entered
-        this.setButtonEnabled('start', false);
+        // Keep Start enabled; validation occurs on click
+        this.setButtonEnabled('start', true);
         // Hide any open modals
         this.showOptions(false);
         this.showStats(false);
@@ -376,9 +385,20 @@ const UI = {
             if (loading) {
                 button.classList.add('loading');
                 button.disabled = true;
+                // Swap visible label for feedback
+                try {
+                    if (!button.dataset.origText) button.dataset.origText = button.textContent || '';
+                    if (buttonName === 'start') button.textContent = 'Starting…';
+                } catch (_) {}
             } else {
                 button.classList.remove('loading');
                 button.disabled = false;
+                try {
+                    if (button.dataset.origText) {
+                        button.textContent = button.dataset.origText;
+                        delete button.dataset.origText;
+                    }
+                } catch (_) {}
             }
         }
     },

@@ -245,12 +245,17 @@ const GameEngine = {
             const npub = player?.npub;
             const initials = player?.initials;
             const satsLost = Number((player?.last_pledge ?? 0)); // per-game sats lost for this round
-            if (window.submitLeaderboardEntry && npub && initials && satsLost > 0) {
+            const canSubmit = Boolean(window.submitLeaderboardEntry && npub && initials && satsLost > 0);
+            try { console.log('[Leaderboard submit check]', { npub: !!npub, initials, satsLost, canSubmit }); } catch (_) {}
+            if (canSubmit) {
                 Promise.resolve(window.submitLeaderboardEntry({ npub, initials, satsLost }))
-                    .then((ok) => { if (ok && window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); })
-                    .catch(() => {});
+                    .then((ok) => {
+                        try { console.log('[Leaderboard submit result]', ok); } catch (_) {}
+                        if (ok && window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey();
+                    })
+                    .catch((err) => { try { console.error('[Leaderboard submit error]', err); } catch (_) {} });
             }
-        } catch (_) {}
+        } catch (e) { try { console.error('[Leaderboard submit exception]', e); } catch (_) {} }
         // Update game-over score message to reflect pledged amount
         try {
             const player = window.getPlayer ? window.getPlayer() : null;
