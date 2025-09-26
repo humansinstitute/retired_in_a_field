@@ -99,6 +99,7 @@ const UI = {
         this.els.optionsShowKeys = document.getElementById('optionsShowKeys');
         this.els.optionsShowStats = document.getElementById('optionsShowStats');
         this.els.optionsShowDonations = document.getElementById('optionsShowDonations');
+        this.els.optionsShowAbout = document.getElementById('optionsShowAbout');
         this.els.optionsShowGame = document.getElementById('optionsShowGame');
         this.els.statsModal = document.getElementById('statsModal');
         this.els.statsModalClose = document.getElementById('statsModalClose');
@@ -209,6 +210,12 @@ const UI = {
                 this.showOptions(false);
                 // Open standalone donations page in a new tab/window
                 try { window.open('donations.html', '_blank', 'noopener,noreferrer'); } catch (_) {}
+            });
+        }
+        if (this.els.optionsShowAbout) {
+            this.els.optionsShowAbout.addEventListener('click', () => {
+                this.showOptions(false);
+                try { window.open('about.html', '_blank', 'noopener,noreferrer'); } catch (_) {}
             });
         }
         if (this.els.optionsShowGame) {
