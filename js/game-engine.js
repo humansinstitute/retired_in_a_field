@@ -8,6 +8,8 @@ const GameEngine = {
     gameRunning: false,
     // Track if game was running before tab was hidden to avoid false resumes
     wasRunningBeforeHidden: false,
+    // Level state
+    currentLevel: 1,
     
     // Speed scaling state for the cow
     speedScaling: {
@@ -26,14 +28,8 @@ const GameEngine = {
         targetX: 0,
         targetY: 0
     },
-    
-    cow: {
-        x: 0,
-        y: 0,
-        width: 40,
-        height: 40,
-        speed: 2
-    },
+    // One or more cows depending on level
+    cows: [],
     
     // Module references
     canvas: null,
@@ -73,7 +69,8 @@ const GameEngine = {
         UI.init({
             onStartGame: () => this.startGame(),
             onPlayAgain: () => this.restartGame(),
-            onInitialsConfirm: () => this.confirmInitialsAndStart()
+            onInitialsConfirm: () => this.confirmInitialsAndStart(),
+            onLevelSelect: (lvl) => this.selectLevelAndStart(lvl)
         });
     },
     
@@ -117,6 +114,61 @@ const GameEngine = {
             }
         } catch (_) {}
 
+        // Always show level selection to give players a goal
+        const unlocked = this.computeUnlockedLevel();
+        if (!this._pendingLevelSelection) {
+            this._pendingLevelSelection = true;
+            UI.showLevelScreen(unlocked);
+            return;
+        }
+
+        // If already pending (e.g., returning from initials), proceed
+        this.beginGameAtLevel(this.currentLevel || 1);
+    },
+
+    confirmInitialsAndStart() {
+        try {
+            if (window.InitialsUI && window.updatePlayer) {
+                const initials = window.InitialsUI.getInitials();
+                const p = window.updatePlayer({ initials });
+                if (window.renderPlayerSummary) window.renderPlayerSummary(p);
+            }
+        } catch (_) {}
+        // Then start the game normally
+        this.startGame();
+    },
+
+    /**
+     * Compute highest unlocked level based on games played
+     * L1: default, L2: >=2 games, L3: >=4 games
+     */
+    computeUnlockedLevel() {
+        try {
+            // Prefer server stats if available
+            const sp = window._serverPlayer || {};
+            const playedServer = Number(sp.played || 0);
+            const playedLocal = Number((window.getPlayer ? window.getPlayer()?.games_played : 0) || 0);
+            const played = Math.max(playedServer, playedLocal);
+            // Unlocks: L2 at 2 games, L3 at 6 games
+            if (played >= 6) return 3;
+            if (played >= 2) return 2;
+        } catch (_) {}
+        return 1;
+    },
+
+    /** Handle selection from the level screen and begin */
+    selectLevelAndStart(level) {
+        this.currentLevel = Math.max(1, Math.min(3, Number(level || 1)));
+        this._pendingLevelSelection = false;
+        this.beginGameAtLevel(this.currentLevel);
+    },
+
+    /** Begin game with a specific level */
+    beginGameAtLevel(level) {
+        this.currentLevel = Math.max(1, Math.min(3, Number(level || 1)));
+        // Inform graphics of the level
+        try { if (Graphics && typeof Graphics.setLevel === 'function') Graphics.setLevel(this.currentLevel); } catch (_) {}
+
         // Hide all UI screens
         UI.showGameScreen();
 
@@ -131,18 +183,6 @@ const GameEngine = {
         // Initialize speed scaling timer at game start
         this.speedScaling.lastIncreaseAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         this.gameLoop();
-    },
-
-    confirmInitialsAndStart() {
-        try {
-            if (window.InitialsUI && window.updatePlayer) {
-                const initials = window.InitialsUI.getInitials();
-                const p = window.updatePlayer({ initials });
-                if (window.renderPlayerSummary) window.renderPlayerSummary(p);
-            }
-        } catch (_) {}
-        // Then start the game normally
-        this.startGame();
     },
     
     /**
@@ -161,12 +201,38 @@ const GameEngine = {
         this.man.height = GameConfig.man.height;
         this.man.speed = GameConfig.man.speed;
         
-        // Reset cow position
-        this.cow.x = canvasSize.width * config.cow.x;
-        this.cow.y = canvasSize.height * config.cow.y;
-        this.cow.width = GameConfig.cow.width;
-        this.cow.height = GameConfig.cow.height;
-        this.cow.speed = GameConfig.cow.speed;
+        // Reset cow(s) based on level
+        const baseCow = () => ({
+            x: 0,
+            y: 0,
+            width: GameConfig.cow.width,
+            height: GameConfig.cow.height,
+            speed: GameConfig.cow.speed
+        });
+        this.cows = [];
+        if (this.currentLevel === 2) {
+            // Two cows: top-left and top-right
+            const margin = 40;
+            const c1 = baseCow();
+            c1.x = margin;
+            c1.y = margin;
+            const c2 = baseCow();
+            c2.x = canvasSize.width - margin;
+            c2.y = margin;
+            this.cows.push(c1, c2);
+        } else if (this.currentLevel === 3) {
+            // Three cows: top-left, top-right, bottom-left
+            const margin = 40;
+            const c1 = baseCow(); c1.x = margin; c1.y = margin;
+            const c2 = baseCow(); c2.x = canvasSize.width - margin; c2.y = margin;
+            const c3 = baseCow(); c3.x = margin; c3.y = canvasSize.height - margin;
+            this.cows.push(c1, c2, c3);
+        } else {
+            const c = baseCow();
+            c.x = canvasSize.width * config.cow.x;
+            c.y = canvasSize.height * config.cow.y;
+            this.cows.push(c);
+        }
     },
     
     /**
@@ -205,15 +271,15 @@ const GameEngine = {
     /**
      * Move cow towards man
      */
-    moveCow() {
-        const dx = this.man.x - this.cow.x;
-        const dy = this.man.y - this.cow.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // Move cow toward man at its speed
-        if (distance > 0) {
-            this.cow.x += (dx / distance) * this.cow.speed;
-            this.cow.y += (dy / distance) * this.cow.speed;
+    moveCows() {
+        for (const cow of this.cows) {
+            const dx = this.man.x - cow.x;
+            const dy = this.man.y - cow.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance > 0) {
+                cow.x += (dx / distance) * cow.speed;
+                cow.y += (dy / distance) * cow.speed;
+            }
         }
     },
     
@@ -221,12 +287,13 @@ const GameEngine = {
      * Check collision between man and cow
      */
     checkCollision() {
-        const dx = this.man.x - this.cow.x;
-        const dy = this.man.y - this.cow.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-        
-        // Collision if distance is less than sum of half widths
-        return distance < (this.man.width / 2 + this.cow.width / 2);
+        for (const cow of this.cows) {
+            const dx = this.man.x - cow.x;
+            const dy = this.man.y - cow.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < (this.man.width / 2 + cow.width / 2)) return true;
+        }
+        return false;
     },
     
     /**
@@ -263,6 +330,13 @@ const GameEngine = {
             const msg = document.getElementById('scoreMessage');
             if (msg) msg.textContent = `You have scored ${pledged} sats!`;
         } catch (_) {}
+
+        // Optimistically increment local games played so levels can unlock within session
+        try {
+            const p = window.getPlayer ? window.getPlayer() : null;
+            const gp = Number((p?.games_played || 0)) + 1;
+            if (window.updatePlayer) window.updatePlayer({ games_played: gp });
+        } catch (_) {}
         UI.showGameOverScreen();
     },
     
@@ -291,9 +365,13 @@ const GameEngine = {
         if (elapsedSinceLast >= this.speedScaling.intervalMs) {
             const steps = Math.floor(elapsedSinceLast / this.speedScaling.intervalMs);
             // Multiply once by factor^steps to avoid incremental rounding
-            const before = this.cow.speed;
-            this.cow.speed *= Math.pow(this.speedScaling.factor, steps);
-            try { console.log(`[CowSpeed] +${steps} step(s): ${before.toFixed(3)} -> ${this.cow.speed.toFixed(3)}`); } catch (_) {}
+            const mult = Math.pow(this.speedScaling.factor, steps);
+            try {
+                const before0 = (this.cows[0]?.speed ?? 0);
+                for (const cow of this.cows) cow.speed *= mult;
+                const after0 = (this.cows[0]?.speed ?? 0);
+                console.log(`[CowSpeed] +${steps} step(s): ${before0.toFixed(3)} -> ${after0.toFixed(3)} (applied to ${this.cows.length} cow(s))`);
+            } catch (_) { for (const cow of this.cows) cow.speed *= mult; }
             this.speedScaling.lastIncreaseAt += steps * this.speedScaling.intervalMs;
         }
         
@@ -304,23 +382,24 @@ const GameEngine = {
         Graphics.clearCanvas();
         
         // Draw field background
-        Graphics.drawField();
+        Graphics.drawBackground();
 
-        // Debug HUD: show cow speed (temporary to verify scaling)
+        // Debug HUD: show first cow speed (temporary to verify scaling)
         try {
             const ctx = Graphics && Graphics.ctx;
             if (ctx) {
                 ctx.save();
-                ctx.font = '14px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif';
+                ctx.font = '28px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif';
                 ctx.fillStyle = 'rgba(255,255,255,0.9)';
-                ctx.fillText(`Cow speed: ${this.cow.speed.toFixed(2)}`, 12, 22);
+                const s = (this.cows[0]?.speed || 0).toFixed(2);
+                ctx.fillText(`Cow speed: ${s}`, 12, 38);
                 ctx.restore();
             }
         } catch (_) {}
 
         // Update game objects
         this.moveMan();
-        this.moveCow();
+        this.moveCows();
         
         // Check for collision
         if (this.checkCollision()) {
@@ -329,7 +408,7 @@ const GameEngine = {
         }
         
         // Draw game objects
-        Graphics.drawCow(this.cow);
+        for (const cow of this.cows) Graphics.drawCow(cow);
         Graphics.drawMan(this.man);
         
         // Continue game loop
@@ -343,7 +422,7 @@ const GameEngine = {
         return {
             running: this.gameRunning,
             man: { ...this.man },
-            cow: { ...this.cow }
+            cows: this.cows.map(c => ({ ...c }))
         };
     },
     

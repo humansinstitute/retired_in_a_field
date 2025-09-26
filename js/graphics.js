@@ -7,6 +7,7 @@ const Graphics = {
     // Canvas and context references
     canvas: null,
     ctx: null,
+    currentLevel: 1,
     
     // Vibration state
     vibrationOffset: { x: 0, y: 0 },
@@ -26,6 +27,10 @@ const Graphics = {
             // Small delay to ensure orientation change is complete
             setTimeout(() => this.resizeCanvas(), 100);
         });
+    },
+
+    setLevel(level) {
+        this.currentLevel = Math.max(1, Math.min(3, Number(level || 1)));
     },
 
     /**
@@ -77,19 +82,43 @@ const Graphics = {
     },
 
     /**
-     * Draw field background with grass pattern
+     * Draw background depending on level
      */
-    drawField() {
+    drawBackground() {
         if (!this.ctx) return;
-        if (typeof GameConfig === 'undefined' || !GameConfig.canvas) return;
-        const config = GameConfig.canvas;
-        this.ctx.fillStyle = config.fieldColor;
-        
-        for (let i = 0; i < this.canvas.width; i += config.grassPatternSize) {
-            for (let j = 0; j < this.canvas.height; j += config.grassPatternSize) {
-                if ((i + j) % (config.grassPatternSize * 2) === 0) {
-                    this.ctx.fillRect(i, j, config.grassBlockSize, config.grassBlockHeight);
+        if (this.currentLevel === 1) {
+            if (typeof GameConfig === 'undefined' || !GameConfig.canvas) return;
+            const config = GameConfig.canvas;
+            this.ctx.fillStyle = config.fieldColor;
+            for (let i = 0; i < this.canvas.width; i += config.grassPatternSize) {
+                for (let j = 0; j < this.canvas.height; j += config.grassPatternSize) {
+                    if ((i + j) % (config.grassPatternSize * 2) === 0) {
+                        this.ctx.fillRect(i, j, config.grassBlockSize, config.grassBlockHeight);
+                    }
                 }
+            }
+        } else if (this.currentLevel === 2) {
+            // Sea: blue background with simple wave stripes
+            this.ctx.fillStyle = '#3BA7F0';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.fillStyle = 'rgba(255,255,255,0.25)';
+            const stripeH = 10;
+            for (let y = 0; y < this.canvas.height; y += 40) {
+                this.ctx.fillRect(0, y + 15, this.canvas.width, stripeH);
+                this.ctx.fillRect(0, y + 35, this.canvas.width, 4);
+            }
+        } else {
+            // Moon: grey background with craters
+            this.ctx.fillStyle = '#9ea3a8';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+            this.ctx.fillStyle = '#8d9297';
+            for (let i = 0; i < 20; i++) {
+                const r = 6 + Math.random() * 18;
+                const x = Math.random() * this.canvas.width;
+                const y = Math.random() * this.canvas.height;
+                this.ctx.beginPath();
+                this.ctx.arc(x, y, r, 0, Math.PI * 2);
+                this.ctx.fill();
             }
         }
     },
@@ -123,6 +152,27 @@ const Graphics = {
             config.headWidth, 
             config.headHeight
         );
+
+        // Level-specific overlays
+        if (this.currentLevel === 2) {
+            // Simple boat under the man
+            this.ctx.fillStyle = '#6b4f2a';
+            const bw = config.width + 12;
+            const bh = 8;
+            this.ctx.fillRect(drawX - bw / 2, drawY + config.height / 2, bw, bh);
+            this.ctx.fillStyle = '#5b3f1a';
+            this.ctx.fillRect(drawX - bw / 2 + 4, drawY + config.height / 2 + 2, bw - 8, bh - 4);
+        } else if (this.currentLevel === 3) {
+            // Helmet around the head (circle visor)
+            this.ctx.strokeStyle = '#dfe7ef';
+            this.ctx.lineWidth = 3;
+            const cx = drawX;
+            const cy = drawY - config.height / 2 - config.headHeight / 2;
+            const r = Math.max(config.headWidth, config.headHeight);
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
         
         // Legs
         this.ctx.fillStyle = config.bodyColor;
@@ -219,6 +269,27 @@ const Graphics = {
             cow.y + config.height / 2 + 5, 
             config.legWidth, 2
         );
+
+        // Level-specific overlays
+        if (this.currentLevel === 2) {
+            // Boat under the cow
+            this.ctx.fillStyle = '#6b4f2a';
+            const bw = config.width + 16;
+            const bh = 10;
+            this.ctx.fillRect(cow.x - bw / 2, cow.y + config.height / 2, bw, bh);
+            this.ctx.fillStyle = '#5b3f1a';
+            this.ctx.fillRect(cow.x - bw / 2 + 5, cow.y + config.height / 2 + 2, bw - 10, bh - 4);
+        } else if (this.currentLevel === 3) {
+            // Helmet around the cow's head region
+            this.ctx.strokeStyle = '#dfe7ef';
+            this.ctx.lineWidth = 3;
+            const cx = cow.x;
+            const cy = cow.y - config.height / 2 - config.headHeight / 2;
+            const r = Math.max(config.headWidth, config.headHeight) + 4;
+            this.ctx.beginPath();
+            this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            this.ctx.stroke();
+        }
     },
 
     /**
