@@ -114,15 +114,15 @@ const GameEngine = {
             }
         } catch (_) {}
 
-        // Check level eligibility
+        // Always show level selection to give players a goal
         const unlocked = this.computeUnlockedLevel();
-        if (unlocked > 1 && !this._pendingLevelSelection) {
+        if (!this._pendingLevelSelection) {
             this._pendingLevelSelection = true;
             UI.showLevelScreen(unlocked);
             return;
         }
 
-        // Proceed to start at current or default level
+        // If already pending (e.g., returning from initials), proceed
         this.beginGameAtLevel(this.currentLevel || 1);
     },
 
@@ -149,8 +149,9 @@ const GameEngine = {
             const playedServer = Number(sp.played || 0);
             const playedLocal = Number((window.getPlayer ? window.getPlayer()?.games_played : 0) || 0);
             const played = Math.max(playedServer, playedLocal);
-            // Testing config: unlock all levels after 1 game
-            if (played >= 1) return 3;
+            // Unlocks: L2 at 2 games, L3 at 6 games
+            if (played >= 6) return 3;
+            if (played >= 2) return 2;
         } catch (_) {}
         return 1;
     },
@@ -388,10 +389,10 @@ const GameEngine = {
             const ctx = Graphics && Graphics.ctx;
             if (ctx) {
                 ctx.save();
-                ctx.font = '14px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif';
+                ctx.font = '28px -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Arial, sans-serif';
                 ctx.fillStyle = 'rgba(255,255,255,0.9)';
                 const s = (this.cows[0]?.speed || 0).toFixed(2);
-                ctx.fillText(`Cow speed: ${s}`, 12, 22);
+                ctx.fillText(`Cow speed: ${s}`, 12, 38);
                 ctx.restore();
             }
         } catch (_) {}
