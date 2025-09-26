@@ -199,6 +199,9 @@
             color: var(--text-secondary);
             width: 100%;
         }
+
+        /* Ensure donations title clears the hamburger */
+        #donationsScreen { padding-top: 56px; }
         
         input, button {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
@@ -378,7 +381,7 @@
                     <img id="setupPreviewImage" src="js/riaf.png" alt="Preview: cow and man in a field" />
                 </div>
               <!-- Top bar with hamburger menu -->
-              <button id="menuButton" aria-label="Menu" style="position:absolute; top:12px; left:12px; width:44px; height:44px; background: transparent; border: none; color: var(--text-secondary); display:flex; align-items:center; justify-content:center; box-shadow: none; padding:0; opacity:0.8;">
+              <button id="menuButton" class="menuButton" aria-label="Menu" style="position:absolute; top:12px; left:12px; width:44px; height:44px; background: transparent; border: none; color: var(--text-secondary); display:flex; align-items:center; justify-content:center; box-shadow: none; padding:0; opacity:0.8;">
                   <span style="font-size:18px; line-height:1;">☰</span>
                 </button>
                 <h1>Retired in a Field</h1>
@@ -412,6 +415,15 @@
             <p id="scoreMessage">You have scored 21 sats!</p>
             <div id="cashAmount">Your money goes towards supporting Nostr Devs!</div>
             <button id="playAgainButton" class="btn">Play Again</button>
+        </div>
+
+        <!-- Donations Screen -->
+        <div id="donationsScreen" class="screen" style="display:none;">
+            <button class="menuButton" aria-label="Menu" style="position:absolute; top:12px; left:12px; width:44px; height:44px; background: transparent; border: none; color: var(--text-secondary); display:flex; align-items:center; justify-content:center; box-shadow: none; padding:0; opacity:0.8;">
+                <span style="font-size:18px; line-height:1;">☰</span>
+            </button>
+            <h1>Donations</h1>
+            <p>Thank you for your support. This page will list donation options soon.</p>
         </div>
 
         <!-- Initials Screen -->
@@ -449,6 +461,9 @@
         </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
           <button id="optionsShowKeys" class="btn" style="width:100%;">Show Keys</button>
+          <button id="optionsShowStats" class="btn" style="width:100%;">My Stats</button>
+          <button id="optionsShowDonations" class="btn" style="width:100%;">Donations</button>
+          <button id="optionsShowGame" class="btn" style="width:100%;">Game</button>
         </div>
       </div>
     </div>

@@ -9,7 +9,8 @@ const UI = {
         setup: null,
         gameOver: null,
         ending: null,
-        initials: null
+        initials: null,
+        donations: null
     },
     
     // Button elements
@@ -32,6 +33,7 @@ const UI = {
         optionsModal: null,
         optionsClose: null,
         menuButton: null,
+        menuButtons: null,
         optionsShowKeys: null,
         optionsShowStats: null,
         statsModal: null,
@@ -77,6 +79,7 @@ const UI = {
         this.screens.gameOver = document.getElementById('gameOverScreen');
         this.screens.ending = document.getElementById('endingScreen');
         this.screens.initials = document.getElementById('initialsScreen');
+        this.screens.donations = document.getElementById('donationsScreen');
         
         // Button elements
         this.buttons.start = document.getElementById('startButton');
@@ -90,10 +93,13 @@ const UI = {
         // Misc elements
         this.els.cashuError = document.getElementById('cashuTokenError');
         this.els.menuButton = document.getElementById('menuButton');
+        this.els.menuButtons = document.querySelectorAll('.menuButton');
         this.els.optionsModal = document.getElementById('optionsModal');
         this.els.optionsClose = document.getElementById('optionsModalClose');
         this.els.optionsShowKeys = document.getElementById('optionsShowKeys');
         this.els.optionsShowStats = document.getElementById('optionsShowStats');
+        this.els.optionsShowDonations = document.getElementById('optionsShowDonations');
+        this.els.optionsShowGame = document.getElementById('optionsShowGame');
         this.els.statsModal = document.getElementById('statsModal');
         this.els.statsModalClose = document.getElementById('statsModalClose');
     },
@@ -173,6 +179,9 @@ const UI = {
         if (this.els.menuButton) {
             this.els.menuButton.addEventListener('click', () => this.showOptions(true));
         }
+        if (this.els.menuButtons && this.els.menuButtons.length) {
+            this.els.menuButtons.forEach(btn => btn.addEventListener('click', () => this.showOptions(true)));
+        }
         if (this.els.optionsClose) {
             this.els.optionsClose.addEventListener('click', () => this.showOptions(false));
         }
@@ -193,6 +202,27 @@ const UI = {
             this.els.optionsShowStats.addEventListener('click', () => {
                 this.showOptions(false);
                 this.showStats(true);
+            });
+        }
+        if (this.els.optionsShowDonations) {
+            this.els.optionsShowDonations.addEventListener('click', () => {
+                this.showOptions(false);
+                this.showDonationsScreen();
+            });
+        }
+        if (this.els.optionsShowGame) {
+            this.els.optionsShowGame.addEventListener('click', () => {
+                this.showOptions(false);
+                // If a game is running show the canvas, otherwise show setup
+                try {
+                    if (window.GameEngine && window.GameEngine.gameRunning) {
+                        this.showGameScreen();
+                    } else {
+                        this.showSetupScreen();
+                    }
+                } catch (_) {
+                    this.showSetupScreen();
+                }
             });
         }
 
@@ -293,6 +323,11 @@ const UI = {
     showInitialsScreen() {
         this.showScreen('initials', true);
         // no-op
+    },
+
+    /** Show donations screen */
+    showDonationsScreen() {
+        this.showScreen('donations', true);
     },
 
     /**
