@@ -92,6 +92,12 @@ const UI = {
         this.screens.levelStart = document.getElementById('levelStartScreen');
         this.buttons.levelStart = document.getElementById('levelStartButton');
         this.buttons.levelStartBack = document.getElementById('levelStartBackButton');
+        // Level 2 start screen elements
+        this.screens.level2Start = document.getElementById('level2StartScreen');
+        this.buttons.level2Start = document.getElementById('level2StartButton');
+        // Level 3 start screen elements
+        this.screens.level3Start = document.getElementById('level3StartScreen');
+        this.buttons.level3Start = document.getElementById('level3StartButton');
         
         // Button elements
         this.buttons.start = document.getElementById('startButton');
@@ -192,11 +198,25 @@ const UI = {
         attachLevel(this.buttons.level2, 2);
         attachLevel(this.buttons.level3, 3);
 
-        // Level start handlers (for level 1 special flow)
+        // Level start handlers (for level 1 and 2 special flow)
         if (this.buttons.levelStart) {
             this.buttons.levelStart.addEventListener('click', () => {
                 if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
                     window.GameEngine.beginGameAtLevel(1);
+                }
+            });
+        }
+        if (this.buttons.level2Start) {
+            this.buttons.level2Start.addEventListener('click', () => {
+                if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
+                    window.GameEngine.beginGameAtLevel(2);
+                }
+            });
+        }
+        if (this.buttons.level3Start) {
+            this.buttons.level3Start.addEventListener('click', () => {
+                if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
+                    window.GameEngine.beginGameAtLevel(3);
                 }
             });
         }

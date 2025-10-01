@@ -385,12 +385,12 @@
                   <span style="font-size:18px; line-height:1;">☰</span>
                 </button>
                 <h1>Retired in a Field</h1>
-                <p>In the Age of AI, we're likely to all end up reitred in a field.<br />So lets get a little practice in.</p>
-                <p>Pay to play, (you can't win, but you can climb the leaderboard)</br >money split to nostr dev projects helped.</p>
+                <p>In the Age of AI, we're likely to all end up retired in a field.<br />So let’s get a little practice in.</p>
+                <p>Pay to play (you can't win, but you can climb the leaderboard).<br />Money split to Nostr dev projects helped.</p>
                 
                 <!-- Cashu Token Input -->
             <input id="cashuTokenInput" type="text" placeholder="Enter Cashu token" autocomplete="off" spellcheck="false" />
-            <div id="cashuTokenNote" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; max-width:320px;">minibits only for now, 21 min</div>
+            <div id="cashuTokenNote" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; max-width:320px;">Minibits only for now, 21 min</div>
             <div id="cashuTokenError" style="color:#dc2626; font-size:0.9rem; display:none; max-width:320px;">Token must start with "cashu".</div>
             
             <button id="startButton" class="btn">Start Game</button>
@@ -422,27 +422,52 @@
                 </button>
             </div>
         </div>
-        
+
+        <!-- Level 1 Start Screen -->
+        <div id="levelStartScreen" class="screen" style="display:none; flex-direction:column; align-items:center; gap:12px; padding: 24px;">
+            <h1 id="levelStartTitle">How to play</h1>
+            <p style="max-width:520px; text-align:center;">Click the field and your man will move to that position</p>
+            <p style="max-width:520px; text-align:center;">Avoid the cow, if he catches you - you lose!</p>
+            <h2 id="levelStartWhy" style="margin-top:8px; color: var(--accent-primary);">Why</h2>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">With the rise of AI, you’ve done well, but you no longer have a job!</p>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">So you’re retired to a field. You’re just looking forward to some quiet time alone, but what’s that cow looking at…</p>
+            <div style="display:flex; gap:12px;">
+                <button id="levelStartButton" class="btn" style="min-width:160px;">Start</button>
+            </div>
+        </div>
+
+        <!-- Level 2 Start Screen -->
+        <div id="level2StartScreen" class="screen" style="display:none; flex-direction:column; align-items:center; gap:12px; padding: 24px;">
+            <h1>How to play</h1>
+            <p style="max-width:520px; text-align:center;">Click the field and your man will move to that position</p>
+            <p style="max-width:520px; text-align:center;">Avoid the cows, if they catch you - you lose!</p>
+            <h2 style="margin-top:8px; color: var(--accent-primary);">Level 2</h2>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">What was that cow’s problem? Wow. Either way the money you had in bitcoin appreciated, you got sick of being chased round the field and you decided to move on up and retire to a nice quiet boat.</p>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">Bliss. But, what’s that noise…</p>
+            <div style="display:flex; gap:12px;">
+                <button id="level2StartButton" class="btn" style="min-width:160px;">Start</button>
+            </div>
+        </div>
+
+        <!-- Level 3 Start Screen -->
+        <div id="level3StartScreen" class="screen" style="display:none; flex-direction:column; align-items:center; gap:12px; padding: 24px;">
+            <h1>How to play</h1>
+            <p style="max-width:520px; text-align:center;">Click the field and your man will move to that position</p>
+            <p style="max-width:520px; text-align:center;">Avoid the cows, if they catch you - you lose!</p>
+            <h2 style="margin-top:8px; color: var(--accent-primary);">Level 3</h2>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">Wow. That is a persistent cow! The bitcoin’s up though and you’re sick of this.</p>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">You leave the planet and retire on the moon. Sure it’s lonely but at least that cow can’t follow you!</p>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">What’s that bounding over the horizon…</p>
+            <div style="display:flex; gap:12px;">
+                <button id="level3StartButton" class="btn" style="min-width:160px;">Start</button>
+            </div>
+        </div>
+
         <!-- Combined End Screen -->
         <div id="gameOverScreen" class="screen">
             <!-- End Screen Image (same size/dimensions as logo/preview) -->
             <div id="endPreviewContainer" style="width:80%; max-width:400px; height:132px; margin: 0 0 12px; position: relative; background-color: #8bc34a; border-radius: 8px; overflow: hidden; box-shadow: var(--shadow-sm); flex-shrink: 0; min-height: 132px;">
                 <img src="js/riaf_end_cow.png" alt="Caught by the cow" style="width:100%; height:100%; object-fit: cover; display: block;" />
-        <!-- Level 1 Start Screen -->
-        <div id="levelStartScreen" class="screen" style="display:none; flex-direction:column; align-items:center; gap:12px; padding: 24px;">
-            <h1 id="levelStartTitle">How to play</h1>
-            <p style="max-width:520px; text-align:center;">Click to move your player.</p>
-            <p style="max-width:520px; text-align:center;">Avoid the cow, if he catches you - you lose!</p>
-            <h2 id="levelStartWhy" style="margin-top:8px;">Why</h2>
-            <p style="max-width:520px; text-align:center;">With the rise of AI, you’ve done well, but you no longer have a job!</p>
-            <p style="max-width:520px; text-align:center;">So you’re retired to a field. You’re just looking forward to some quiet time alone, what’s that cow looking at…</p>
-            <div style="display:flex; gap:12px;">
-                <button id="levelStartBackButton" class="btn" style="min-width:120px; background:var(--bg-secondary); color:var(--text-primary);">Back</button>
-                <button id="levelStartButton" class="btn" style="min-width:120px;">Start</button>
-            </div>
-        </div>
-
-
             </div>
             <h1>Gotcha!</h1>
             <p>Oh no! The cow has caught you!</p>
