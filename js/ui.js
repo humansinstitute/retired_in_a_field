@@ -87,6 +87,11 @@ const UI = {
         this.screens.ending = document.getElementById('endingScreen');
         this.screens.initials = document.getElementById('initialsScreen');
         this.screens.donations = document.getElementById('donationsScreen');
+
+        // Level start screen elements
+        this.screens.levelStart = document.getElementById('levelStartScreen');
+        this.buttons.levelStart = document.getElementById('levelStartButton');
+        this.buttons.levelStartBack = document.getElementById('levelStartBackButton');
         
         // Button elements
         this.buttons.start = document.getElementById('startButton');
@@ -186,6 +191,21 @@ const UI = {
         attachLevel(this.buttons.level1, 1);
         attachLevel(this.buttons.level2, 2);
         attachLevel(this.buttons.level3, 3);
+
+        // Level start handlers (for level 1 special flow)
+        if (this.buttons.levelStart) {
+            this.buttons.levelStart.addEventListener('click', () => {
+                if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
+                    window.GameEngine.beginGameAtLevel(1);
+                }
+            });
+        }
+        if (this.buttons.levelStartBack) {
+            this.buttons.levelStartBack.addEventListener('click', () => {
+                // Return to level select screen
+                this.showLevelScreen(1);
+            });
+        }
 
         // Live validation for Cashu token input
         if (this.inputs.cashuToken) {
