@@ -160,6 +160,11 @@ const GameEngine = {
     selectLevelAndStart(level) {
         this.currentLevel = Math.max(1, Math.min(3, Number(level || 1)));
         this._pendingLevelSelection = false;
+        // For level 1, show a level-specific start screen before beginning
+        if (this.currentLevel === 1) {
+            try { if (UI && typeof UI.showScreen === "function") UI.showScreen('levelStart'); } catch (_) {}
+            return;
+        }
         this.beginGameAtLevel(this.currentLevel);
     },
 
