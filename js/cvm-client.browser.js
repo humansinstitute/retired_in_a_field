@@ -3,7 +3,7 @@
 
 const SERVER_PUBKEY = window.CVM_SERVER_PUBKEY || "";
 const RELAYS = [
-  "wss://relay.contextvm.org",
+  // "wss://relay.contextvm.org",
   "wss://cvm.otherstuff.ai",
 ];
 
