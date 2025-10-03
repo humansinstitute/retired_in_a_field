@@ -109,7 +109,7 @@ function renderLeaderboard(items) {
   // Header row
   const header = document.createElement('div');
   header.style.display = 'grid';
-  header.style.gridTemplateColumns = '48px 1fr 1fr 1fr';
+  header.style.gridTemplateColumns = '48px 1fr 1fr 1fr 1fr 1fr';
   header.style.gap = '8px';
   header.style.color = 'var(--accent-primary)';
   header.style.fontWeight = '700';
@@ -117,11 +117,15 @@ function renderLeaderboard(items) {
   const hPos = document.createElement('div'); hPos.textContent = 'POS';
   const hInit = document.createElement('div'); hInit.textContent = 'Initials';
   const hNpub = document.createElement('div'); hNpub.textContent = 'Npub';
-  const hScore = document.createElement('div'); hScore.textContent = 'Score!';
+  const hSats = document.createElement('div'); hSats.textContent = 'Sats Lost';
+  const hPoints = document.createElement('div'); hPoints.textContent = 'Points';
+  const hMax = document.createElement('div'); hMax.textContent = 'Max Speed';
   header.appendChild(hPos);
   header.appendChild(hInit);
   header.appendChild(hNpub);
-  header.appendChild(hScore);
+  header.appendChild(hSats);
+  header.appendChild(hPoints);
+  header.appendChild(hMax);
   list.appendChild(header);
   const ul = document.createElement('div');
   ul.style.display = 'grid';
@@ -129,7 +133,7 @@ function renderLeaderboard(items) {
   items.forEach((it, idx) => {
     const row = document.createElement('div');
     row.style.display = 'grid';
-    row.style.gridTemplateColumns = '48px 1fr 1fr 1fr';
+    row.style.gridTemplateColumns = '48px 1fr 1fr 1fr 1fr 1fr';
     row.style.gap = '8px';
     row.style.alignItems = 'center';
     row.style.background = 'var(--bg-secondary)';
@@ -153,20 +157,40 @@ function renderLeaderboard(items) {
     npub.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace';
     npub.style.opacity = '0.85';
 
-    const score = document.createElement('div');
-    const scoreVal = Number(
+    // Sats Lost column (original score)
+    const satsEl = document.createElement('div');
+    const satsVal = Number(
       (typeof it.satsLost !== 'undefined') ? it.satsLost :
       (typeof it.score !== 'undefined') ? it.score :
       (typeof it.sats !== 'undefined') ? it.sats : 0
     );
-    score.textContent = `${scoreVal} sats`;
-    score.style.fontVariantNumeric = 'tabular-nums';
-    score.style.textAlign = 'right';
+    satsEl.textContent = `${satsVal} sats`;
+    satsEl.style.fontVariantNumeric = 'tabular-nums';
+    satsEl.style.textAlign = 'right';
+
+    const points = document.createElement('div');
+    const pointsVal = Number(
+      (typeof it.points !== 'undefined') ? it.points : 0
+    );
+    points.textContent = `${pointsVal}`;
+    points.style.fontVariantNumeric = 'tabular-nums';
+    points.style.textAlign = 'right';
+
+    const maxSpeed = document.createElement('div');
+    const maxVal = Number(
+      (typeof it.maxCowSpeed !== 'undefined') ? it.maxCowSpeed :
+      (typeof it.max_speed !== 'undefined') ? it.max_speed : 0
+    );
+    maxSpeed.textContent = `${maxVal.toFixed(2)}`;
+    maxSpeed.style.fontVariantNumeric = 'tabular-nums';
+    maxSpeed.style.textAlign = 'right';
 
     row.appendChild(pos);
     row.appendChild(init);
     row.appendChild(npub);
-    row.appendChild(score);
+    row.appendChild(satsEl);
+    row.appendChild(points);
+    row.appendChild(maxSpeed);
     ul.appendChild(row);
   });
   list.appendChild(ul);
@@ -180,6 +204,11 @@ function renderPlayerSummaryFromServer(data) {
     try { window._serverPlayer = data; } catch (_) {}
     const initials = (data && data.initials) ? String(data.initials) : '';
     const score = Number(data && data.score ? data.score : 0);
+    const points = Number(data && data.points ? data.points : 0);
+    const maxSpeed = Number(
+      (typeof data.maxCowSpeed !== 'undefined') ? data.maxCowSpeed :
+      (typeof data.max_speed !== 'undefined') ? data.max_speed : 0
+    );
     const played = Number(data && data.played ? data.played : 0);
     if (!initials) {
       // If no initials on server, keep existing UI (might be empty)
@@ -187,7 +216,9 @@ function renderPlayerSummaryFromServer(data) {
     }
     el.innerHTML = `
       <div><strong>Player:</strong> ${initials}</div>
-      <div><strong>Score:</strong> ${score} Sats</div>
+      <div><strong>Sats Lost:</strong> ${score} Sats</div>
+      <div><strong>Points:</strong> ${points}</div>
+      <div><strong>Max Cow Speed:</strong> ${maxSpeed.toFixed(2)}</div>
       <div><strong>Games Played:</strong> ${played}</div>
     `;
   } catch (_) {}
@@ -297,16 +328,21 @@ async function fetchLeaderboardWithPlayerKey() {
     } catch (e) {
       try { console.warn('Failed to parse leaderboard payload', e); } catch (_) {}
     }
-    if (Array.isArray(items)) {
-      // Sort highest satsLost first
-      const scoreOf = (it) => Number(
+  if (Array.isArray(items)) {
+      // Sort primarily by sats lost (original score), then by points
+      const satsOf = (it) => Number(
         (typeof it.satsLost !== 'undefined') ? it.satsLost :
         (typeof it.score !== 'undefined') ? it.score :
         (typeof it.sats !== 'undefined') ? it.sats : 0
       );
-      items.sort((a, b) => scoreOf(b) - scoreOf(a));
+      const pointsOf = (it) => Number((typeof it.points !== 'undefined') ? it.points : 0);
+      items.sort((a, b) => {
+        const da = satsOf(a), db = satsOf(b);
+        if (db !== da) return db - da;
+        return pointsOf(b) - pointsOf(a);
+      });
       renderLeaderboard(items);
-    } else {
+  } else {
       try { console.warn('Leaderboard items missing or invalid'); } catch (_) {}
     }
 
@@ -339,7 +375,7 @@ function generateRefId() {
   }
 }
 
-async function submitLeaderboardEntry({ npub, initials, satsLost, refId }) {
+async function submitLeaderboardEntry({ npub, initials, satsLost, points, maxCowSpeed, refId }) {
   try {
     if (!SERVER_PUBKEY) {
       console.warn("CVM server pubkey not configured (window.CVM_SERVER_PUBKEY). Skipping leaderboard update.");
@@ -387,7 +423,14 @@ async function submitLeaderboardEntry({ npub, initials, satsLost, refId }) {
     const mcpClient = new Client({ name: "retired-fe-client", version: "1.0.0" });
     await mcpClient.connect(clientTransport);
 
-    const args = { npub, initials, satsLost: Number(satsLost), refId: refId || generateRefId() };
+    const args = {
+      npub,
+      initials,
+      satsLost: Number(satsLost),
+      points: Number(points || 0),
+      maxCowSpeed: Number(maxCowSpeed || 0),
+      refId: refId || generateRefId()
+    };
     const result = await mcpClient.callTool({ name: "update_leaderboard", arguments: args });
     console.log("Leaderboard update result:", result);
 

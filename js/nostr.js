@@ -200,10 +200,17 @@ function renderPlayerSummary(player) {
   }
   const initials = player.initials;
   const score = Number(player.score || 0);
+  const points = Number((player.points || (window._serverPlayer && window._serverPlayer.points) || 0));
+  const maxSpeed = Number(
+    (typeof player.maxCowSpeed !== 'undefined') ? player.maxCowSpeed :
+    (window._serverPlayer && (typeof window._serverPlayer.maxCowSpeed !== 'undefined' ? window._serverPlayer.maxCowSpeed : window._serverPlayer.max_speed)) || 0
+  );
   const games = Number(player.games_played || 0);
   el.innerHTML = `
     <div><strong>Player:</strong> ${initials}</div>
-    <div><strong>Score:</strong> ${score} Sats</div>
+    <div><strong>Sats Lost:</strong> ${score} Sats</div>
+    <div><strong>Points:</strong> ${points}</div>
+    <div><strong>Max Cow Speed:</strong> ${maxSpeed.toFixed(2)}</div>
     <div><strong>Games Played:</strong> ${games}</div>
   `;
 }

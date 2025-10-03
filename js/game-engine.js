@@ -17,6 +17,9 @@ const GameEngine = {
         factor: 1.21,      // increase by 21%
         lastIncreaseAt: 0  // timestamp via performance.now()
     },
+    // Tracking per-run stats
+    maxCowSpeed: 0,
+    lastPoints: 0,
     
     // Game objects
     man: {
@@ -195,6 +198,13 @@ const GameEngine = {
         this.gameRunning = true;
         // Initialize speed scaling timer at game start
         this.speedScaling.lastIncreaseAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        // Reset per-run stats
+        try {
+            let maxS = 0;
+            for (const c of this.cows) maxS = Math.max(maxS, Number(c.speed || 0));
+            this.maxCowSpeed = maxS;
+            this.lastPoints = 0;
+        } catch (_) { this.maxCowSpeed = 0; this.lastPoints = 0; }
         this.gameLoop();
     },
     
@@ -246,6 +256,12 @@ const GameEngine = {
             c.y = canvasSize.height * config.cow.y;
             this.cows.push(c);
         }
+        // Initialize maxCowSpeed baseline to starting cow speeds
+        try {
+            let maxS = 0;
+            for (const c of this.cows) maxS = Math.max(maxS, Number(c.speed || 0));
+            this.maxCowSpeed = maxS;
+        } catch (_) { this.maxCowSpeed = 0; }
     },
     
     /**
@@ -325,10 +341,21 @@ const GameEngine = {
             const npub = player?.npub;
             const initials = player?.initials;
             const satsLost = Number((player?.last_pledge ?? 0)); // per-game sats lost for this round
+            // Generate points (random between 21 and 25621)
+            const points = (() => {
+                try {
+                    const min = 21, max = 25621;
+                    const val = Math.floor(Math.random() * (max - min + 1)) + min;
+                    this.lastPoints = val;
+                    return val;
+                } catch (_) { this.lastPoints = 21; return 21; }
+            })();
+            // Capture max cow speed for this round
+            const maxCowSpeed = Number(this.maxCowSpeed || 0);
             const canSubmit = Boolean(window.submitLeaderboardEntry && npub && initials && satsLost > 0);
             try { console.log('[Leaderboard submit check]', { npub: !!npub, initials, satsLost, canSubmit }); } catch (_) {}
             if (canSubmit) {
-                Promise.resolve(window.submitLeaderboardEntry({ npub, initials, satsLost }))
+                Promise.resolve(window.submitLeaderboardEntry({ npub, initials, satsLost, points, maxCowSpeed }))
                     .then((ok) => {
                         try { console.log('[Leaderboard submit result]', ok); } catch (_) {}
                         if (ok && window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey();
@@ -336,12 +363,16 @@ const GameEngine = {
                     .catch((err) => { try { console.error('[Leaderboard submit error]', err); } catch (_) {} });
             }
         } catch (e) { try { console.error('[Leaderboard submit exception]', e); } catch (_) {} }
-        // Update game-over score message to reflect pledged amount
+        // Update game-over score message and extras
         try {
             const player = window.getPlayer ? window.getPlayer() : null;
             const pledged = Number((player?.last_pledge ?? 0));
             const msg = document.getElementById('scoreMessage');
             if (msg) msg.textContent = `You have scored ${pledged} sats!`;
+            const pmsg = document.getElementById('pointsMessage');
+            if (pmsg) pmsg.textContent = `Points: ${this.lastPoints}`;
+            const sMsg = document.getElementById('maxSpeedMessage');
+            if (sMsg) sMsg.textContent = `Max Cow Speed: ${Number(this.maxCowSpeed || 0).toFixed(2)}`;
         } catch (_) {}
 
         // Optimistically increment local games played so levels can unlock within session
@@ -384,6 +415,12 @@ const GameEngine = {
                 for (const cow of this.cows) cow.speed *= mult;
                 const after0 = (this.cows[0]?.speed ?? 0);
                 console.log(`[CowSpeed] +${steps} step(s): ${before0.toFixed(3)} -> ${after0.toFixed(3)} (applied to ${this.cows.length} cow(s))`);
+                // Update maxCowSpeed after applying increases
+                try {
+                    let maxS = this.maxCowSpeed || 0;
+                    for (const c of this.cows) maxS = Math.max(maxS, Number(c.speed || 0));
+                    this.maxCowSpeed = maxS;
+                } catch (_) {}
             } catch (_) { for (const cow of this.cows) cow.speed *= mult; }
             this.speedScaling.lastIncreaseAt += steps * this.speedScaling.intervalMs;
         }
