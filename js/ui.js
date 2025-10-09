@@ -11,7 +11,12 @@ const UI = {
         gameOver: null,
         ending: null,
         initials: null,
-        donations: null
+        donations: null,
+        levelStart: null,
+        level2Start: null,
+        level3Start: null,
+        level4Start: null,
+        level5Start: null
     },
     
     // Button elements
@@ -22,7 +27,9 @@ const UI = {
         initialsContinue: null,
         level1: null,
         level2: null,
-        level3: null
+        level3: null,
+        level4: null,
+        level5: null
     },
 
     // Inputs
@@ -98,6 +105,12 @@ const UI = {
         // Level 3 start screen elements
         this.screens.level3Start = document.getElementById('level3StartScreen');
         this.buttons.level3Start = document.getElementById('level3StartButton');
+        // Level 4 start screen elements
+        this.screens.level4Start = document.getElementById('level4StartScreen');
+        this.buttons.level4Start = document.getElementById('level4StartButton');
+        // Level 5 start screen elements
+        this.screens.level5Start = document.getElementById('level5StartScreen');
+        this.buttons.level5Start = document.getElementById('level5StartButton');
         
         // Button elements
         this.buttons.start = document.getElementById('startButton');
@@ -107,6 +120,8 @@ const UI = {
         this.buttons.level1 = document.getElementById('levelBtn1');
         this.buttons.level2 = document.getElementById('levelBtn2');
         this.buttons.level3 = document.getElementById('levelBtn3');
+        this.buttons.level4 = document.getElementById('levelBtn4');
+        this.buttons.level5 = document.getElementById('levelBtn5');
 
         // Inputs
         this.inputs.cashuToken = document.getElementById('cashuTokenInput');
@@ -131,41 +146,9 @@ const UI = {
      */
     setupEventListeners() {
         if (this.buttons.start) {
-            this.buttons.start.addEventListener('click', async () => {
-                // Guard: require a token-ish value (basic UI check), then verify via cashu_access
-                const token = (this.inputs.cashuToken?.value || '').trim();
-                const valid = this.validateCashuToken(token);
-                if (!valid) {
-                    this.showCashuError(true);
-                    return;
-                }
-                // Create a refId for idempotency if available
-                let startRefId = null;
-                try { startRefId = (typeof window.generateRefId === 'function') ? window.generateRefId() : null; } catch (_) { startRefId = null; }
-                this.setButtonLoading('start', true);
-                try {
-                    const res = (window.redeemCashuAccess)
-                        ? await window.redeemCashuAccess(token, 21, startRefId)
-                        : { decision: 'ACCESS_DENIED', amount: 0, reason: 'cashu_access unavailable', mode: 'error' };
-                    if (res && res.decision === 'ACCESS_GRANTED') {
-                        // Save token locally and record pledged amount for this session
-                        try { localStorage.setItem('cashuToken', token); } catch (_) {}
-                        try {
-                            const amt = Number(res.amount);
-                            if (Number.isFinite(amt) && amt > 0) {
-                                if (window.updatePlayer) window.updatePlayer({ last_pledge: amt });
-                            }
-                        } catch (_) {}
-                        if (this.onStartGame) this.onStartGame();
-                    } else {
-                        const reason = res && res.reason ? String(res.reason) : 'unknown';
-                        this.showToast(`Minimum to play is 21 sats. ${reason}`);
-                    }
-                } catch (e) {
-                    this.showToast(`Minimum to play is 21 sats. ${String(e && e.message ? e.message : e)}`);
-                } finally {
-                    this.setButtonLoading('start', false);
-                }
+            this.buttons.start.addEventListener('click', () => {
+                this.showCashuError(false);
+                if (this.onStartGame) this.onStartGame();
             });
         }
         
@@ -197,6 +180,8 @@ const UI = {
         attachLevel(this.buttons.level1, 1);
         attachLevel(this.buttons.level2, 2);
         attachLevel(this.buttons.level3, 3);
+        attachLevel(this.buttons.level4, 4);
+        attachLevel(this.buttons.level5, 5);
 
         // Level start handlers (for level 1 and 2 special flow)
         if (this.buttons.levelStart) {
@@ -217,6 +202,20 @@ const UI = {
             this.buttons.level3Start.addEventListener('click', () => {
                 if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
                     window.GameEngine.beginGameAtLevel(3);
+                }
+            });
+        }
+        if (this.buttons.level4Start) {
+            this.buttons.level4Start.addEventListener('click', () => {
+                if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
+                    window.GameEngine.beginGameAtLevel(4);
+                }
+            });
+        }
+        if (this.buttons.level5Start) {
+            this.buttons.level5Start.addEventListener('click', () => {
+                if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
+                    window.GameEngine.beginGameAtLevel(5);
                 }
             });
         }
@@ -370,9 +369,8 @@ const UI = {
         // Hide any open modals
         this.showOptions(false);
         this.showStats(false);
-        // Refresh authoritative stats and leaderboard from Context VM
-        try { if (window.fetchPlayerStatsWithPlayerKey) window.fetchPlayerStatsWithPlayerKey(); } catch (_) {}
-        try { if (window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); } catch (_) {}
+        // try { if (window.fetchPlayerStatsWithPlayerKey) window.fetchPlayerStatsWithPlayerKey(); } catch (_) {}
+        // try { if (window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); } catch (_) {}
     },
 
     /** Show the level selection screen and enable unlocked buttons */
@@ -387,6 +385,8 @@ const UI = {
         lock(this.buttons.level1, true);
         lock(this.buttons.level2, unlockedLevel >= 2);
         lock(this.buttons.level3, unlockedLevel >= 3);
+        lock(this.buttons.level4, unlockedLevel >= 4);
+        lock(this.buttons.level5, unlockedLevel >= 5);
     },
 
     /**
