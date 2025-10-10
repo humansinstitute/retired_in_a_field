@@ -33,6 +33,14 @@ function bytesToHex(buf) {
 
 async function ensurePlayer() {
   let player = PlayerStore.get();
+  const needsRegeneration = player && (
+    !player.privkey || !player.pubkey || !player.npub || !player.nsec ||
+    (typeof player.nsec === 'string' && player.nsec.startsWith('('))
+  );
+  if (needsRegeneration) {
+    try { sessionStorage.removeItem(PLAYER_STORAGE_KEY); } catch (_) {}
+    player = null;
+  }
   if (player) return player;
 
   const { generateSecretKey, getPublicKey, nip19 } = await import(
@@ -52,7 +60,8 @@ async function ensurePlayer() {
     score: 0,
     games_played: 0,
     initials: null,
-    last_pledge: 0
+    last_pledge: 0,
+    auth_mode: 'ephemeral'
   };
   PlayerStore.set(player);
   return player;
@@ -76,7 +85,9 @@ function renderKeys(player) {
   npubEl.style.background = 'var(--inline-code-bg)';
   npubEl.style.color = 'var(--text-primary)';
   npubEl.style.marginBottom = '6px';
-  npubEl.textContent = `npub: ${player.npub}`;
+  npubEl.style.whiteSpace = 'pre-wrap';
+  const linked = player.linked_npub ? `\nlinked npub: ${player.linked_npub}` : '';
+  npubEl.textContent = `session npub: ${player.npub}${linked}`;
 
   const nsecEl = document.createElement('div');
   nsecEl.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, monospace';
@@ -92,7 +103,9 @@ function renderKeys(player) {
   note.style.marginTop = '6px';
   note.style.fontSize = '0.8rem';
   note.style.color = 'var(--text-muted)';
-  note.textContent = 'Stored in session only; closes when tab is closed.';
+  note.textContent = player.linked_npub
+    ? 'Session key signs MCP traffic. Linked npub is used for leaderboard identity.'
+    : 'Stored in session only; closes when tab is closed.';
 
   container.appendChild(title);
   container.appendChild(npubEl);
@@ -164,10 +177,21 @@ function setupKeysModal(player) {
   }
 
   function render() {
-    npubEl.textContent = `npub: ${player.npub}`;
-    nsecEl.textContent = revealed ? `nsec: ${player.nsec}` : maskedNsecText(player.nsec);
-    toggleBtn.textContent = revealed ? '🙈' : '👁';
-    toggleBtn.setAttribute('aria-label', revealed ? 'Hide private key' : 'Reveal private key');
+    const p = window.getPlayer ? (window.getPlayer() || player) : player;
+    const linked = p.linked_npub ? `\nlinked npub: ${p.linked_npub}` : '';
+    npubEl.style.whiteSpace = 'pre-wrap';
+    npubEl.textContent = `session npub: ${p.npub}${linked}`;
+
+    const hasNsec = !!p.nsec;
+    if (hasNsec) {
+      nsecEl.textContent = revealed ? `nsec: ${p.nsec}` : maskedNsecText(p.nsec);
+      toggleBtn.style.display = '';
+      toggleBtn.textContent = revealed ? '🙈' : '👁';
+      toggleBtn.setAttribute('aria-label', revealed ? 'Hide private key' : 'Reveal private key');
+    } else {
+      nsecEl.textContent = 'Session key unavailable; refresh the tab to generate a new one.';
+      toggleBtn.style.display = 'none';
+    }
   }
 
   render();
@@ -188,6 +212,38 @@ function setupKeysModal(player) {
     render();
   };
 }
+
+// NIP-07 login: overwrite to use extension signer
+window.loginWithNip07 = async () => {
+  try {
+    if (typeof window === 'undefined' || !window.nostr || typeof window.nostr.getPublicKey !== 'function') {
+      alert('No Nostr extension detected (NIP-07). Please install a Nostr browser extension.');
+      return false;
+    }
+    const pubkeyHex = await window.nostr.getPublicKey();
+    const { nip19 } = await import('https://esm.sh/nostr-tools@2?bundle');
+    const npub = nip19.npubEncode(pubkeyHex);
+
+    // Update player store to record extension identity while keeping session keys
+    const updated = PlayerStore.update({
+      auth_mode: 'nip07',
+      linked_pubkey: pubkeyHex,
+      linked_npub: npub,
+      linked_at: Date.now()
+    });
+
+    // Re-render keys modal and stats
+    try { renderKeys(updated); } catch (_) {}
+    try { renderPlayerSummary(updated); } catch (_) {}
+    try { if (window.fetchPlayerStatsWithPlayerKey) window.fetchPlayerStatsWithPlayerKey(); } catch (_) {}
+    try { if (window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); } catch (_) {}
+    try { if (window.UI && typeof window.UI.updateNostrLoginIndicator === 'function') window.UI.updateNostrLoginIndicator(); } catch (_) {}
+    return true;
+  } catch (e) {
+    console.error('NIP-07 login failed:', e);
+    return false;
+  }
+};
 
 // Override: Only show stats if initials exist and at least one game played
 function renderPlayerSummary(player) {

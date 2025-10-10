@@ -16,6 +16,38 @@ async function loadDeps() {
   return { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner };
 }
 
+// Simple NIP-07 signer adapter for NostrClientTransport
+class Nip07Signer {
+  async getPublicKey() {
+    if (!window.nostr || typeof window.nostr.getPublicKey !== 'function') throw new Error('NIP-07 not available');
+    return await window.nostr.getPublicKey();
+    }
+  async signEvent(evt) {
+    if (!window.nostr || typeof window.nostr.signEvent !== 'function') throw new Error('NIP-07 not available');
+    return await window.nostr.signEvent(evt);
+  }
+}
+
+function getLinkedOrSessionNpub(player) {
+  if (!player) return null;
+  return player.linked_npub || player.npub || null;
+}
+
+async function getActiveSigner(PrivateKeySigner) {
+  try {
+    const p = window.getPlayer ? window.getPlayer() : null;
+    const priv = p?.privkey;
+    if (priv) return new PrivateKeySigner(priv);
+    if (p?.auth_mode === 'nip07' && window.nostr && typeof window.nostr.signEvent === 'function') {
+      return new Nip07Signer();
+    }
+    throw new Error('No signer available');
+  } catch (_) {
+    if (window.nostr && typeof window.nostr.signEvent === 'function') return new Nip07Signer();
+    throw new Error('No signer available');
+  }
+}
+
 function ensureLeaderboardUI() {
   let container = document.getElementById('leaderboard');
   if (!container) {
@@ -236,9 +268,8 @@ async function fetchPlayerStatsWithPlayerKey() {
         player = window.getPlayer ? window.getPlayer() : null;
       }
     }
-    const priv = player?.privkey;
-    const npub = player?.npub;
-    if (!npub) return;
+    const targetNpub = getLinkedOrSessionNpub(player);
+    if (!targetNpub) return;
 
     if (!SERVER_PUBKEY) {
       console.warn("CVM server pubkey not configured (window.CVM_SERVER_PUBKEY). Skipping player stats fetch.");
@@ -246,14 +277,14 @@ async function fetchPlayerStatsWithPlayerKey() {
     }
 
     const { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner } = await loadDeps();
-    const signer = new PrivateKeySigner(priv);
+    const signer = await getActiveSigner(PrivateKeySigner);
     const relayPool = new ApplesauceRelayPool(RELAYS);
     const clientTransport = new NostrClientTransport({ signer, relayHandler: relayPool, serverPubkey: SERVER_PUBKEY });
 
     const mcpClient = new Client({ name: "retired-fe-client", version: "1.0.0" });
     await mcpClient.connect(clientTransport);
 
-    const result = await mcpClient.callTool({ name: "get_player", arguments: { npub } });
+    const result = await mcpClient.callTool({ name: "get_player", arguments: { npub: targetNpub } });
     // Try to normalize result; some MCP bridges return { content: [{ text: "...json..." }] }
     let data = null;
     try {
@@ -290,8 +321,6 @@ async function fetchLeaderboardWithPlayerKey() {
         player = window.getPlayer ? window.getPlayer() : null;
       }
     }
-    const priv = player?.privkey;
-
     if (!SERVER_PUBKEY) {
       console.warn("CVM server pubkey not configured (window.CVM_SERVER_PUBKEY). Skipping leaderboard fetch.");
       return;
@@ -299,7 +328,7 @@ async function fetchLeaderboardWithPlayerKey() {
 
     const { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner } = await loadDeps();
 
-    const signer = new PrivateKeySigner(priv);
+    const signer = await getActiveSigner(PrivateKeySigner);
     const relayPool = new ApplesauceRelayPool(RELAYS);
 
     const clientTransport = new NostrClientTransport({
@@ -393,15 +422,18 @@ async function submitLeaderboardEntry({ npub, initials, satsLost, points, maxCow
       }
     }
 
-    const priv = player?.privkey;
-    if (!priv) {
-      console.warn("Player private key unavailable; cannot submit leaderboard entry.");
+    const hasPriv = !!player?.privkey;
+    const canUseNip07 = !hasPriv && player?.auth_mode === 'nip07' && !!window.nostr;
+    if (!hasPriv && !canUseNip07) {
+      console.warn("No signer available for leaderboard update (need session key or NIP-07).");
       return false;
     }
 
+    const targetNpub = npub || getLinkedOrSessionNpub(player);
+
     // Validate required args
-    if (!npub || !initials || typeof satsLost === 'undefined') {
-      console.warn("submitLeaderboardEntry missing required fields", { npub, initials, satsLost });
+    if (!targetNpub || !initials || typeof satsLost === 'undefined') {
+      console.warn("submitLeaderboardEntry missing required fields", { npub: targetNpub, initials, satsLost });
       return false;
     }
     // Basic shape checks per server spec
@@ -412,7 +444,7 @@ async function submitLeaderboardEntry({ npub, initials, satsLost, points, maxCow
 
     const { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner } = await loadDeps();
 
-    const signer = new PrivateKeySigner(priv);
+    const signer = await getActiveSigner(PrivateKeySigner);
     const relayPool = new ApplesauceRelayPool(RELAYS);
     const clientTransport = new NostrClientTransport({
       signer,
@@ -424,7 +456,7 @@ async function submitLeaderboardEntry({ npub, initials, satsLost, points, maxCow
     await mcpClient.connect(clientTransport);
 
     const args = {
-      npub,
+      npub: targetNpub,
       initials,
       satsLost: Number(satsLost),
       points: Number(points || 0),
@@ -484,13 +516,14 @@ async function redeemCashuAccess(encodedToken, minAmount = 21, refId) {
         player = window.getPlayer ? window.getPlayer() : null;
       }
     }
-    const priv = player?.privkey;
-    if (!priv) {
+    const hasPriv = !!player?.privkey;
+    const canUseNip07 = !hasPriv && player?.auth_mode === 'nip07' && !!window.nostr;
+    if (!hasPriv && !canUseNip07) {
       return { decision: 'ACCESS_DENIED', amount: 0, reason: 'player key unavailable', mode: 'error' };
     }
 
     const { Client, ApplesauceRelayPool, NostrClientTransport, PrivateKeySigner } = await loadDeps();
-    const signer = new PrivateKeySigner(priv);
+    const signer = await getActiveSigner(PrivateKeySigner);
     const relayPool = new ApplesauceRelayPool(RELAYS);
     const clientTransport = new NostrClientTransport({ signer, relayHandler: relayPool, serverPubkey: SERVER_PUBKEY });
     const mcpClient = new Client({ name: 'retired-fe-client', version: '1.0.0' });
