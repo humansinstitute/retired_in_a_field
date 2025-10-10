@@ -30,7 +30,7 @@ const Graphics = {
     },
 
     setLevel(level) {
-        this.currentLevel = Math.max(1, Math.min(3, Number(level || 1)));
+        this.currentLevel = Math.max(1, Math.min(5, Number(level || 1)));
     },
 
     /**
@@ -107,7 +107,7 @@ const Graphics = {
                 this.ctx.fillRect(0, y + 15, this.canvas.width, stripeH);
                 this.ctx.fillRect(0, y + 35, this.canvas.width, 4);
             }
-        } else {
+        } else if (this.currentLevel === 3) {
             // Moon: grey background with craters
             this.ctx.fillStyle = '#9ea3a8';
             this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -119,6 +119,47 @@ const Graphics = {
                 this.ctx.beginPath();
                 this.ctx.arc(x, y, r, 0, Math.PI * 2);
                 this.ctx.fill();
+            }
+        } else if (this.currentLevel === 4) {
+            // Beach: gradient sky to sand split
+            const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+            gradient.addColorStop(0, '#4da3ff');
+            gradient.addColorStop(0.55, '#7ecbff');
+            gradient.addColorStop(0.75, '#fce38a');
+            gradient.addColorStop(1, '#f7c66a');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.ctx.fillStyle = 'rgba(255,255,255,0.35)';
+            const horizonY = Math.floor(this.canvas.height * 0.55);
+            for (let i = 0; i < 6; i++) {
+                const offset = i * 14;
+                this.ctx.fillRect(0, horizonY + offset, this.canvas.width, 4);
+            }
+        } else {
+            // Neon grid backdrop for laser showdown
+            const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+            gradient.addColorStop(0, '#2c1d6f');
+            gradient.addColorStop(0.4, '#4b227b');
+            gradient.addColorStop(0.75, '#f64f6b');
+            gradient.addColorStop(1, '#ffa24c');
+            this.ctx.fillStyle = gradient;
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+            this.ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            this.ctx.lineWidth = 1;
+            const spacing = 48;
+            for (let x = 0; x < this.canvas.width; x += spacing) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, 0);
+                this.ctx.lineTo(x, this.canvas.height);
+                this.ctx.stroke();
+            }
+            for (let y = 0; y < this.canvas.height; y += spacing) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, y);
+                this.ctx.lineTo(this.canvas.width, y);
+                this.ctx.stroke();
             }
         }
     },

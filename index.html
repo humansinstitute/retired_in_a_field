@@ -387,13 +387,19 @@
                 <h1>Retired in a Field</h1>
                 <p>In the Age of AI, we're likely to all end up retired in a field.<br />So let’s get a little practice in.</p>
                 <p>Pay to play (you can't win, but you can climb the leaderboard).<br />Money split to Nostr dev projects helped.</p>
-                
                 <!-- Cashu Token Input -->
             <input id="cashuTokenInput" type="text" placeholder="Enter Cashu token" autocomplete="off" spellcheck="false" />
             <div id="cashuTokenNote" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; max-width:320px;">Minibits only for now, 21 min</div>
             <div id="cashuTokenError" style="color:#dc2626; font-size:0.9rem; display:none; max-width:320px;">Token must start with "cashu".</div>
             
             <button id="startButton" class="btn">Start Game</button>
+            
+            <!-- Nostr Login CTA -->
+            <div style="margin-top:12px; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                <p style="max-width:520px; color: var(--text-secondary); margin-bottom:0;">Bring your own npub via extension</p>
+                <button id="loginNostrSetupButton" class="btn" style="min-width:240px; background: rgba(162, 129, 255, 0.25); color: var(--text-primary); border-color: rgba(162, 129, 255, 0.45);">Login with Nostr (NIP-07)</button>
+                <div id="loginNostrSetupStatus" style="color: var(--text-muted); font-size: 0.9rem; min-height: 1.2em;"></div>
+            </div>
             <div id="leaderboard" style="width:80%; max-width:400px; margin:12px auto 0; padding:10px; border-top:1px solid var(--border-primary);">
                 <div id="leaderboardStatus" style="display:flex; align-items:center; gap:8px; color: var(--text-secondary);">
                     <span class="spinner" style="width:14px; height:14px; border:2px solid var(--border-primary); border-top-color:transparent; border-radius:50%; display:inline-block; animation: spin 0.9s linear infinite;"></span>
@@ -406,7 +412,7 @@
         <!-- Level Selection Screen -->
         <div id="levelScreen" class="screen" style="display:none; justify-content:center; gap:16px;">
             <h1 style="margin-top:24px;">Level Select</h1>
-            <p style="max-width:520px;">Pick a level you have unlocked. Level 2 unlocks after 2 games. Level 3 unlocks after 6 games.</p>
+            <p style="max-width:520px;">Pick a level. Classic chase lives in 1-3, then try the beach drop stampede and laser-eye showdown unlocked for this standalone build.</p>
             <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center;">
                 <button id="levelBtn1" class="btn" style="font-size:18px; min-width:180px; min-height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;">
                     <div style="font-size:22px; font-weight:700;">Level 1</div>
@@ -419,6 +425,14 @@
                 <button id="levelBtn3" class="btn" style="font-size:18px; min-width:180px; min-height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;">
                     <div style="font-size:22px; font-weight:700;">Level 3</div>
                     <div style="font-size:16px; opacity:0.95;">Retired on the Moon!</div>
+                </button>
+                <button id="levelBtn4" class="btn" style="font-size:18px; min-width:180px; min-height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;">
+                    <div style="font-size:22px; font-weight:700;">Level 4</div>
+                    <div style="font-size:16px; opacity:0.95;">Retired on the Beach!</div>
+                </button>
+                <button id="levelBtn5" class="btn" style="font-size:18px; min-width:180px; min-height:88px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;">
+                    <div style="font-size:22px; font-weight:700;">Level 5</div>
+                    <div style="font-size:16px; opacity:0.95;">Laser Eyes Showdown!</div>
                 </button>
             </div>
         </div>
@@ -463,6 +477,32 @@
             </div>
         </div>
 
+        <!-- Level 4 Start Screen -->
+        <div id="level4StartScreen" class="screen" style="display:none; flex-direction:column; align-items:center; gap:12px; padding: 24px;">
+            <h1>How to play</h1>
+            <p style="max-width:520px; text-align:center;">Tap to move. Dodge the beach drop-ins.</p>
+            <p style="max-width:520px; text-align:center;">Every two seconds a wave of cows dives straight down. One touch and it's over.</p>
+            <h2 style="margin-top:8px; color: var(--accent-primary);">Level 4</h2>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">Retiring on the beach sounded chill—until the herd picked up skydiving.</p>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">Survive as the stampede grows denser every other wave.</p>
+            <div style="display:flex; gap:12px;">
+                <button id="level4StartButton" class="btn" style="min-width:160px;">Start</button>
+            </div>
+        </div>
+
+        <!-- Level 5 Start Screen -->
+        <div id="level5StartScreen" class="screen" style="display:none; flex-direction:column; align-items:center; gap:12px; padding: 24px;">
+            <h1>How to play</h1>
+            <p style="max-width:520px; text-align:center;">Two cows are back on the chase. Magenta power-ups drop every couple seconds—grab one for laser eyes.</p>
+            <p style="max-width:520px; text-align:center;">Lasers stun any cow caught in the beam for a second. When they wear off, the stampede resumes.</p>
+            <h2 style="margin-top:8px; color: var(--accent-primary);">Level 5</h2>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">Retired life unlocks laser-eye surgery, apparently.</p>
+            <p style="max-width:520px; text-align:center; color: var(--accent-primary);">Chain beams together or get run down when the cows recover.</p>
+            <div style="display:flex; gap:12px;">
+                <button id="level5StartButton" class="btn" style="min-width:160px;">Start</button>
+            </div>
+        </div>
+
         <!-- Combined End Screen -->
         <div id="gameOverScreen" class="screen">
             <!-- End Screen Image (same size/dimensions as logo/preview) -->
@@ -474,6 +514,8 @@
             <p>It's not easy to be a retired in a field.</p>
             <p>The more you practice the more you'll climb up the leaderboard!</p>
             <p id="scoreMessage">You have scored 21 sats!</p>
+            <p id="pointsMessage" style="margin-top:4px;">Points: 0</p>
+            <p id="maxSpeedMessage" style="margin-top:2px;">Max Cow Speed: 0.00</p>
             <div id="cashAmount">Your money goes towards supporting Nostr Devs!</div>
             <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:8px;">
               <button id="playAgainButton" class="btn">Play Again</button>
@@ -525,6 +567,7 @@
         </div>
         <div style="display:flex; flex-direction:column; gap:8px;">
           <button id="optionsShowKeys" class="btn" style="width:100%;">Show Keys</button>
+          <button id="optionsLoginNostr" class="btn" style="width:100%;">Login with Nostr (NIP-07)</button>
           <button id="optionsShowAbout" class="btn" style="width:100%;">About</button>
           <button id="optionsShowDonations" class="btn" style="width:100%;">Donations</button>
           <button id="optionsShowGame" class="btn" style="width:100%;">Game</button>

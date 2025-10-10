@@ -11,7 +11,12 @@ const UI = {
         gameOver: null,
         ending: null,
         initials: null,
-        donations: null
+        donations: null,
+        levelStart: null,
+        level2Start: null,
+        level3Start: null,
+        level4Start: null,
+        level5Start: null
     },
     
     // Button elements
@@ -22,7 +27,15 @@ const UI = {
         initialsContinue: null,
         level1: null,
         level2: null,
-        level3: null
+        level3: null,
+        level4: null,
+        level5: null,
+        levelStart: null,
+        levelStartBack: null,
+        level2Start: null,
+        level3Start: null,
+        level4Start: null,
+        level5Start: null
     },
 
     // Inputs
@@ -40,8 +53,11 @@ const UI = {
         menuButtons: null,
         optionsShowKeys: null,
         optionsShowStats: null,
+        optionsLoginNostr: null,
         statsModal: null,
-        statsModalClose: null
+        statsModalClose: null,
+        loginNostrSetupButton: null,
+        loginNostrSetupStatus: null
     },
 
     // Callback functions
@@ -68,6 +84,8 @@ const UI = {
         this.setupElements();
         this.setupEventListeners();
         this.setupPreviews();
+        // Reflect current auth state in setup login UI
+        try { this.updateNostrLoginIndicator(); } catch (_) {}
 
         // Initial state: if setup screen is visible, ensure Start is enabled
         if (this.screens.setup && this.screens.setup.style.display !== 'none') {
@@ -98,6 +116,12 @@ const UI = {
         // Level 3 start screen elements
         this.screens.level3Start = document.getElementById('level3StartScreen');
         this.buttons.level3Start = document.getElementById('level3StartButton');
+        // Level 4 start screen elements
+        this.screens.level4Start = document.getElementById('level4StartScreen');
+        this.buttons.level4Start = document.getElementById('level4StartButton');
+        // Level 5 start screen elements
+        this.screens.level5Start = document.getElementById('level5StartScreen');
+        this.buttons.level5Start = document.getElementById('level5StartButton');
         
         // Button elements
         this.buttons.start = document.getElementById('startButton');
@@ -107,6 +131,8 @@ const UI = {
         this.buttons.level1 = document.getElementById('levelBtn1');
         this.buttons.level2 = document.getElementById('levelBtn2');
         this.buttons.level3 = document.getElementById('levelBtn3');
+        this.buttons.level4 = document.getElementById('levelBtn4');
+        this.buttons.level5 = document.getElementById('levelBtn5');
 
         // Inputs
         this.inputs.cashuToken = document.getElementById('cashuTokenInput');
@@ -119,11 +145,14 @@ const UI = {
         this.els.optionsClose = document.getElementById('optionsModalClose');
         this.els.optionsShowKeys = document.getElementById('optionsShowKeys');
         this.els.optionsShowStats = document.getElementById('optionsShowStats');
+        this.els.optionsLoginNostr = document.getElementById('optionsLoginNostr');
         this.els.optionsShowDonations = document.getElementById('optionsShowDonations');
         this.els.optionsShowAbout = document.getElementById('optionsShowAbout');
         this.els.optionsShowGame = document.getElementById('optionsShowGame');
         this.els.statsModal = document.getElementById('statsModal');
         this.els.statsModalClose = document.getElementById('statsModalClose');
+        this.els.loginNostrSetupButton = document.getElementById('loginNostrSetupButton');
+        this.els.loginNostrSetupStatus = document.getElementById('loginNostrSetupStatus');
     },
 
     /**
@@ -197,6 +226,8 @@ const UI = {
         attachLevel(this.buttons.level1, 1);
         attachLevel(this.buttons.level2, 2);
         attachLevel(this.buttons.level3, 3);
+        attachLevel(this.buttons.level4, 4);
+        attachLevel(this.buttons.level5, 5);
 
         // Level start handlers (for level 1 and 2 special flow)
         if (this.buttons.levelStart) {
@@ -220,10 +251,30 @@ const UI = {
                 }
             });
         }
+        if (this.buttons.level4Start) {
+            this.buttons.level4Start.addEventListener('click', () => {
+                if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
+                    window.GameEngine.beginGameAtLevel(4);
+                }
+            });
+        }
+        if (this.buttons.level5Start) {
+            this.buttons.level5Start.addEventListener('click', () => {
+                if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
+                    window.GameEngine.beginGameAtLevel(5);
+                }
+            });
+        }
         if (this.buttons.levelStartBack) {
             this.buttons.levelStartBack.addEventListener('click', () => {
                 // Return to level select screen
-                this.showLevelScreen(1);
+                let unlocked = 1;
+                try {
+                    if (window.GameEngine && typeof window.GameEngine.computeUnlockedLevel === 'function') {
+                        unlocked = window.GameEngine.computeUnlockedLevel();
+                    }
+                } catch (_) {}
+                this.showLevelScreen(unlocked);
             });
         }
 
@@ -266,6 +317,49 @@ const UI = {
                 this.showStats(true);
             });
         }
+        if (this.els.optionsLoginNostr) {
+            this.els.optionsLoginNostr.addEventListener('click', async () => {
+                this.showOptions(false);
+                try {
+                    if (typeof window.loginWithNip07 === 'function') {
+                        const ok = await window.loginWithNip07();
+                        if (ok) {
+                            this.showToast('Logged in with Nostr extension');
+                            try { this.updateNostrLoginIndicator(); } catch (_) {}
+                            try { if (window.fetchPlayerStatsWithPlayerKey) window.fetchPlayerStatsWithPlayerKey(); } catch (_) {}
+                            try { if (window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); } catch (_) {}
+                        } else {
+                            this.showToast('Nostr login cancelled or failed');
+                        }
+                    } else {
+                        this.showToast('Nostr extension login unavailable');
+                    }
+                } catch (e) {
+                    this.showToast(`Nostr login error: ${String(e && e.message ? e.message : e)}`);
+                }
+            });
+        }
+        if (this.els.loginNostrSetupButton) {
+            this.els.loginNostrSetupButton.addEventListener('click', async () => {
+                try {
+                    if (typeof window.loginWithNip07 === 'function') {
+                        const ok = await window.loginWithNip07();
+                        if (ok) {
+                            this.showToast('Logged in with Nostr extension');
+                            try { this.updateNostrLoginIndicator(); } catch (_) {}
+                            try { if (window.fetchPlayerStatsWithPlayerKey) window.fetchPlayerStatsWithPlayerKey(); } catch (_) {}
+                            try { if (window.fetchLeaderboardWithPlayerKey) window.fetchLeaderboardWithPlayerKey(); } catch (_) {}
+                        } else {
+                            this.showToast('Nostr login cancelled or failed');
+                        }
+                    } else {
+                        this.showToast('Nostr extension login unavailable');
+                    }
+                } catch (e) {
+                    this.showToast(`Nostr login error: ${String(e && e.message ? e.message : e)}`);
+                }
+            });
+        }
         if (this.els.optionsShowDonations) {
             this.els.optionsShowDonations.addEventListener('click', () => {
                 this.showOptions(false);
@@ -304,6 +398,24 @@ const UI = {
                 if (e.target === this.els.statsModal) this.showStats(false);
             });
         }
+    },
+
+    updateNostrLoginIndicator() {
+        try {
+            const p = window.getPlayer ? window.getPlayer() : null;
+            const linkedNpub = p?.linked_npub || '';
+            const isLinked = Boolean(linkedNpub);
+            const short = isLinked ? (String(linkedNpub).length > 16 ? `${String(linkedNpub).slice(0, 12)}…` : linkedNpub) : '';
+            if (this.els.loginNostrSetupButton) {
+                this.els.loginNostrSetupButton.textContent = isLinked ? 'Re-link Nostr (NIP-07)' : 'Login with Nostr (NIP-07)';
+            }
+            if (this.els.optionsLoginNostr) {
+                this.els.optionsLoginNostr.textContent = isLinked ? 'Re-link Nostr (NIP-07)' : 'Login with Nostr (NIP-07)';
+            }
+            if (this.els.loginNostrSetupStatus) {
+                this.els.loginNostrSetupStatus.textContent = isLinked ? `Linked npub: ${short}` : '';
+            }
+        } catch (_) {}
     },
 
     /**
@@ -387,6 +499,8 @@ const UI = {
         lock(this.buttons.level1, true);
         lock(this.buttons.level2, unlockedLevel >= 2);
         lock(this.buttons.level3, unlockedLevel >= 3);
+        lock(this.buttons.level4, unlockedLevel >= 4);
+        lock(this.buttons.level5, unlockedLevel >= 5);
     },
 
     /**
