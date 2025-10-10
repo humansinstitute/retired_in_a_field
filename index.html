@@ -387,18 +387,19 @@
                 <h1>Retired in a Field</h1>
                 <p>In the Age of AI, we're likely to all end up retired in a field.<br />So let’s get a little practice in.</p>
                 <p>Pay to play (you can't win, but you can climb the leaderboard).<br />Money split to Nostr dev projects helped.</p>
-                
-                <!-- Nostr Login CTA above Cashu token -->
-            <p style="max-width:520px; color: var(--text-secondary);">If you'd like to bring your own key, log in with an extension</p>
-            <button id="loginNostrSetupButton" class="btn" style="min-width:240px;">Login with Nostr (NIP-07)</button>
-            <div id="loginNostrSetupStatus" style="color: var(--text-muted); font-size: 0.9rem; margin-top: 6px; min-height: 1.2em;"></div>
-
                 <!-- Cashu Token Input -->
             <input id="cashuTokenInput" type="text" placeholder="Enter Cashu token" autocomplete="off" spellcheck="false" />
             <div id="cashuTokenNote" style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; max-width:320px;">Minibits only for now, 21 min</div>
             <div id="cashuTokenError" style="color:#dc2626; font-size:0.9rem; display:none; max-width:320px;">Token must start with "cashu".</div>
             
             <button id="startButton" class="btn">Start Game</button>
+            
+            <!-- Nostr Login CTA -->
+            <div style="margin-top:12px; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                <p style="max-width:520px; color: var(--text-secondary); margin-bottom:0;">Bring your own npub via extension</p>
+                <button id="loginNostrSetupButton" class="btn" style="min-width:240px; background: rgba(162, 129, 255, 0.25); color: var(--text-primary); border-color: rgba(162, 129, 255, 0.45);">Login with Nostr (NIP-07)</button>
+                <div id="loginNostrSetupStatus" style="color: var(--text-muted); font-size: 0.9rem; min-height: 1.2em;"></div>
+            </div>
             <div id="leaderboard" style="width:80%; max-width:400px; margin:12px auto 0; padding:10px; border-top:1px solid var(--border-primary);">
                 <div id="leaderboardStatus" style="display:flex; align-items:center; gap:8px; color: var(--text-secondary);">
                     <span class="spinner" style="width:14px; height:14px; border:2px solid var(--border-primary); border-top-color:transparent; border-radius:50%; display:inline-block; animation: spin 0.9s linear infinite;"></span>
