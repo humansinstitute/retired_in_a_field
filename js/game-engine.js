@@ -33,6 +33,14 @@ const GameEngine = {
         powerUp: null
     },
 
+    // Speed boost power-up state for classic levels
+    speedBoost: {
+        intervalMs: 2000,
+        lastSpawnAt: 0,
+        powerUp: null,
+        multiplier: 1
+    },
+
     laserActiveUntil: 0,
     
     // Game objects
@@ -114,6 +122,9 @@ const GameEngine = {
                     }
                     if (this.currentLevel === 5 && this.level5) {
                         this.level5.lastPowerUpAt = resumeNow;
+                    }
+                    if (this.currentLevel >= 1 && this.currentLevel <= 3 && this.speedBoost) {
+                        this.speedBoost.lastSpawnAt = resumeNow;
                     }
                     this.gameLoop();
                 }
@@ -201,6 +212,16 @@ const GameEngine = {
     /** Begin game with a specific level */
     beginGameAtLevel(level) {
         this.currentLevel = Math.max(1, Math.min(5, Number(level || 1)));
+        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+        if (this.currentLevel >= 1 && this.currentLevel <= 3) {
+            this.speedBoost.multiplier = 1;
+            this.speedBoost.powerUp = null;
+            this.speedBoost.lastSpawnAt = now;
+        } else {
+            this.speedBoost.powerUp = null;
+        }
+
         // Inform graphics of the level
         try { if (Graphics && typeof Graphics.setLevel === 'function') Graphics.setLevel(this.currentLevel); } catch (_) {}
 
@@ -215,7 +236,7 @@ const GameEngine = {
 
         // Start the game
         this.gameRunning = true;
-        const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
         // Initialize timers per level
         if (this.currentLevel === 4) {
             this.level4.lastWaveAt = now;
@@ -225,6 +246,9 @@ const GameEngine = {
             this.level5.lastPowerUpAt = now;
             this.level5.powerUp = null;
             this.laserActiveUntil = 0;
+        }
+        if (this.currentLevel >= 1 && this.currentLevel <= 3) {
+            this.speedBoost.lastSpawnAt = now;
         }
         this.speedScaling.lastIncreaseAt = now;
         this.gameLoop();
@@ -244,7 +268,12 @@ const GameEngine = {
         this.man.targetY = this.man.y;
         this.man.width = GameConfig.man.width;
         this.man.height = GameConfig.man.height;
-        this.man.speed = GameConfig.man.speed;
+        const baseSpeed = GameConfig.man.speed;
+        if (this.currentLevel >= 1 && this.currentLevel <= 3) {
+            this.man.speed = baseSpeed * this.speedBoost.multiplier;
+        } else {
+            this.man.speed = baseSpeed;
+        }
         
         // Reset cow(s) based on level
         const baseCow = () => ({
@@ -441,6 +470,59 @@ const GameEngine = {
         cow.disabledUntil = now + 1000;
     },
 
+    maybeSpawnSpeedBoost(now) {
+        if (!(this.currentLevel >= 1 && this.currentLevel <= 3)) return;
+        const state = this.speedBoost;
+        if (!state) return;
+        if (!state.lastSpawnAt) state.lastSpawnAt = now;
+        if (state.powerUp) return;
+        if (now - state.lastSpawnAt < state.intervalMs) return;
+        state.lastSpawnAt = now;
+        this.spawnSpeedBoostPowerUp();
+    },
+
+    spawnSpeedBoostPowerUp() {
+        if (!this.canvas) return;
+        const radius = 16;
+        const padding = radius + 12;
+        const x = padding + Math.random() * Math.max(1, this.canvas.width - padding * 2);
+        const y = padding + Math.random() * Math.max(1, this.canvas.height - padding * 2);
+        this.speedBoost.powerUp = { x, y, radius };
+    },
+
+    checkSpeedBoostCollision() {
+        if (!(this.currentLevel >= 1 && this.currentLevel <= 3)) return;
+        const powerUp = this.speedBoost.powerUp;
+        if (!powerUp) return;
+        const dx = this.man.x - powerUp.x;
+        const dy = this.man.y - powerUp.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= (powerUp.radius + Math.max(this.man.width, this.man.height) / 2)) {
+            this.speedBoost.multiplier *= 1.1;
+            this.man.speed *= 1.1;
+            this.speedBoost.powerUp = null;
+            this.speedBoost.lastSpawnAt = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        }
+    },
+
+    drawSpeedBoostPowerUp() {
+        if (!(this.currentLevel >= 1 && this.currentLevel <= 3)) return;
+        const powerUp = this.speedBoost.powerUp;
+        if (!powerUp) return;
+        const ctx = Graphics && Graphics.ctx;
+        if (!ctx) return;
+        ctx.save();
+        const gradient = ctx.createRadialGradient(powerUp.x, powerUp.y, 4, powerUp.x, powerUp.y, powerUp.radius);
+        gradient.addColorStop(0, '#ffffff');
+        gradient.addColorStop(0.6, '#00d4ff');
+        gradient.addColorStop(1, 'rgba(0, 212, 255, 0.35)');
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(powerUp.x, powerUp.y, powerUp.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    },
+
     drawLevel5PowerUp() {
         if (this.currentLevel !== 5) return;
         const powerUp = this.level5.powerUp;
@@ -548,6 +630,10 @@ const GameEngine = {
         if (this.level5) {
             this.level5.powerUp = null;
         }
+        if (this.speedBoost) {
+            this.speedBoost.powerUp = null;
+            this.speedBoost.multiplier = 1;
+        }
         UI.showSetupScreen();
         // Ensure summary reflects latest values when returning home
         try { if (window.renderPlayerSummary) window.renderPlayerSummary(); } catch (_) {}
@@ -580,6 +666,9 @@ const GameEngine = {
             if (this.currentLevel === 5) {
                 this.maybeSpawnLevel5PowerUp(now);
             }
+            if (this.currentLevel >= 1 && this.currentLevel <= 3) {
+                this.maybeSpawnSpeedBoost(now);
+            }
         }
 
         // Update vibration effect
@@ -593,6 +682,9 @@ const GameEngine = {
 
         if (this.currentLevel === 5) {
             this.drawLevel5PowerUp();
+        }
+        if (this.currentLevel >= 1 && this.currentLevel <= 3) {
+            this.drawSpeedBoostPowerUp();
         }
 
         // Debug HUD: show first cow speed (temporary to verify scaling)
@@ -615,6 +707,9 @@ const GameEngine = {
         if (this.currentLevel === 5) {
             this.checkLevel5PowerUpCollision(now);
             this.applyLaserDamage(now);
+        }
+        if (this.currentLevel >= 1 && this.currentLevel <= 3) {
+            this.checkSpeedBoostCollision();
         }
         this.moveCows(now);
         
@@ -670,6 +765,9 @@ const GameEngine = {
             }
             if (this.currentLevel === 5 && this.level5) {
                 this.level5.lastPowerUpAt = resumeNow;
+            }
+            if (this.currentLevel >= 1 && this.currentLevel <= 3 && this.speedBoost) {
+                this.speedBoost.lastSpawnAt = resumeNow;
             }
             this.gameLoop();
         }
