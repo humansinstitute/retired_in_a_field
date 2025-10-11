@@ -143,8 +143,18 @@ const GameEngine = {
     startGame() {
         // If initials are not set, route to initials screen
         try {
-            const p = window.getPlayer ? window.getPlayer() : null;
-            if (!p || !p.initials) {
+            let p = window.getPlayer ? window.getPlayer() : null;
+            let initials = p?.initials;
+            if (!initials) {
+                try {
+                    const serverInitials = window._serverPlayer && window._serverPlayer.initials;
+                    if (serverInitials && window.updatePlayer) {
+                        p = window.updatePlayer({ initials: serverInitials }) || p;
+                        initials = serverInitials;
+                    }
+                } catch (_) {}
+            }
+            if (!p || !initials) {
                 if (window.InitialsUI && window.InitialsUI.initInitialsUI) {
                     window.InitialsUI.initInitialsUI();
                 }

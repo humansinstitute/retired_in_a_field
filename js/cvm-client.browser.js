@@ -295,6 +295,17 @@ async function fetchPlayerStatsWithPlayerKey() {
       data = result;
     }
     if (data && !data.error) {
+      try {
+        if (window.updatePlayer) {
+          const patch = {};
+          if (data.initials) patch.initials = String(data.initials).slice(0, 3).toUpperCase();
+          if (typeof data.played !== 'undefined') patch.games_played = Number(data.played);
+          if (typeof data.score !== 'undefined') patch.score = Number(data.score);
+          if (typeof data.points !== 'undefined') patch.points = Number(data.points);
+          if (typeof data.maxCowSpeed !== 'undefined') patch.maxCowSpeed = Number(data.maxCowSpeed);
+          if (Object.keys(patch).length) window.updatePlayer(patch);
+        }
+      } catch (_) {}
       renderPlayerSummaryFromServer(data);
     } else if (data && data.error) {
       console.warn('get_player error:', data.error, 'npub:', data.npub);
