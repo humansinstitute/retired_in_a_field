@@ -16,7 +16,8 @@ const UI = {
         level2Start: null,
         level3Start: null,
         level4Start: null,
-        level5Start: null
+        level5Start: null,
+        level6Start: null
     },
     
     // Button elements
@@ -30,12 +31,14 @@ const UI = {
         level3: null,
         level4: null,
         level5: null,
+        level6: null,
         levelStart: null,
         levelStartBack: null,
         level2Start: null,
         level3Start: null,
         level4Start: null,
-        level5Start: null
+        level5Start: null,
+        level6Start: null
     },
 
     // Inputs
@@ -122,6 +125,9 @@ const UI = {
         // Level 5 start screen elements
         this.screens.level5Start = document.getElementById('level5StartScreen');
         this.buttons.level5Start = document.getElementById('level5StartButton');
+        // Level 6 start screen elements
+        this.screens.level6Start = document.getElementById('level6StartScreen');
+        this.buttons.level6Start = document.getElementById('level6StartButton');
         
         // Button elements
         this.buttons.start = document.getElementById('startButton');
@@ -133,6 +139,7 @@ const UI = {
         this.buttons.level3 = document.getElementById('levelBtn3');
         this.buttons.level4 = document.getElementById('levelBtn4');
         this.buttons.level5 = document.getElementById('levelBtn5');
+        this.buttons.level6 = document.getElementById('levelBtn6');
 
         // Inputs
         this.inputs.cashuToken = document.getElementById('cashuTokenInput');
@@ -228,6 +235,7 @@ const UI = {
         attachLevel(this.buttons.level3, 3);
         attachLevel(this.buttons.level4, 4);
         attachLevel(this.buttons.level5, 5);
+        attachLevel(this.buttons.level6, 6);
 
         // Level start handlers (for level 1 and 2 special flow)
         if (this.buttons.levelStart) {
@@ -262,6 +270,13 @@ const UI = {
             this.buttons.level5Start.addEventListener('click', () => {
                 if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
                     window.GameEngine.beginGameAtLevel(5);
+                }
+            });
+        }
+        if (this.buttons.level6Start) {
+            this.buttons.level6Start.addEventListener('click', () => {
+                if (window.GameEngine && typeof window.GameEngine.beginGameAtLevel === 'function') {
+                    window.GameEngine.beginGameAtLevel(6);
                 }
             });
         }
@@ -501,6 +516,7 @@ const UI = {
         lock(this.buttons.level3, unlockedLevel >= 3);
         lock(this.buttons.level4, unlockedLevel >= 4);
         lock(this.buttons.level5, unlockedLevel >= 5);
+        lock(this.buttons.level6, unlockedLevel >= 6);
     },
 
     /**

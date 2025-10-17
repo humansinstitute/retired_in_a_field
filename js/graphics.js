@@ -13,6 +13,9 @@ const Graphics = {
     vibrationOffset: { x: 0, y: 0 },
     vibrationPhase: 0,
 
+    // Cached level-specific assets
+    cloudField: null,
+
     /**
      * Initialize the graphics module with canvas reference
      */
@@ -30,7 +33,10 @@ const Graphics = {
     },
 
     setLevel(level) {
-        this.currentLevel = Math.max(1, Math.min(5, Number(level || 1)));
+        this.currentLevel = Math.max(1, Math.min(6, Number(level || 1)));
+        if (this.currentLevel !== 6) {
+            this.cloudField = null;
+        }
     },
 
     /**
@@ -136,7 +142,7 @@ const Graphics = {
                 const offset = i * 14;
                 this.ctx.fillRect(0, horizonY + offset, this.canvas.width, 4);
             }
-        } else {
+        } else if (this.currentLevel === 5) {
             // Neon grid backdrop for laser showdown
             const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
             gradient.addColorStop(0, '#2c1d6f');
@@ -161,6 +167,12 @@ const Graphics = {
                 this.ctx.lineTo(this.canvas.width, y);
                 this.ctx.stroke();
             }
+        } else if (this.currentLevel === 6) {
+            this.drawCloudSky();
+        } else {
+            // Fallback
+            this.ctx.fillStyle = '#8bc34a';
+            this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
     },
 
@@ -213,22 +225,69 @@ const Graphics = {
             this.ctx.beginPath();
             this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
             this.ctx.stroke();
+        } else if (this.currentLevel === 6) {
+            // Plane seat / wing beneath the man
+            const seatWidth = config.width + 52;
+            const seatHeight = 12;
+            const seatY = drawY + config.height / 2 - seatHeight / 2;
+            this.ctx.fillStyle = '#d9e2f4';
+            this.ctx.fillRect(drawX - seatWidth / 2, seatY, seatWidth, seatHeight);
+            this.ctx.fillStyle = '#b2c1db';
+            this.ctx.fillRect(drawX - seatWidth / 2 + 4, seatY + 3, seatWidth - 8, seatHeight - 6);
+
+            // Wing taper
+            const wingWidth = seatWidth + 60;
+            const wingThickness = 10;
+            this.ctx.fillStyle = '#94a7c7';
+            this.ctx.beginPath();
+            this.ctx.moveTo(drawX - wingWidth / 2, seatY + seatHeight);
+            this.ctx.lineTo(drawX + wingWidth / 2, seatY + seatHeight);
+            this.ctx.lineTo(drawX + wingWidth / 2 - 36, seatY + seatHeight + wingThickness);
+            this.ctx.lineTo(drawX - wingWidth / 2 + 36, seatY + seatHeight + wingThickness);
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            // Harness straps
+            this.ctx.fillStyle = '#111822';
+            this.ctx.fillRect(drawX - 6, drawY - config.height / 2, 4, config.height);
+            this.ctx.fillRect(drawX + 2, drawY - config.height / 2, 4, config.height);
+
+            // Cabin floor shadow
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+            const shadowWidth = seatWidth + 20;
+            const shadowHeight = 12;
+            this.ctx.beginPath();
+            this.ctx.ellipse(drawX, seatY + seatHeight + wingThickness + shadowHeight / 2, shadowWidth / 2, shadowHeight, 0, 0, Math.PI * 2);
+            this.ctx.fill();
         }
         
         // Legs
-        this.ctx.fillStyle = config.bodyColor;
-        this.ctx.fillRect(
-            drawX - 12, 
-            drawY + config.height / 2 - 5, 
-            config.legWidth, 
-            config.legHeight
-        );
-        this.ctx.fillRect(
-            drawX + 4, 
-            drawY + config.height / 2 - 5, 
-            config.legWidth, 
-            config.legHeight
-        );
+        if (this.currentLevel === 6) {
+            const legThickness = config.legWidth;
+            const footLength = config.legHeight + 6;
+            const seatBaseY = drawY + config.height / 2 - 2;
+            this.ctx.fillStyle = config.bodyColor;
+            // Left leg bent forward
+            this.ctx.fillRect(drawX - 10, seatBaseY - 4, legThickness, 6);
+            this.ctx.fillRect(drawX - 10 + legThickness, seatBaseY, footLength, 4);
+            // Right leg bent forward
+            this.ctx.fillRect(drawX + 2, seatBaseY - 4, legThickness, 6);
+            this.ctx.fillRect(drawX + 2 + legThickness, seatBaseY, footLength, 4);
+        } else {
+            this.ctx.fillStyle = config.bodyColor;
+            this.ctx.fillRect(
+                drawX - 12, 
+                drawY + config.height / 2 - 5, 
+                config.legWidth, 
+                config.legHeight
+            );
+            this.ctx.fillRect(
+                drawX + 4, 
+                drawY + config.height / 2 - 5, 
+                config.legWidth, 
+                config.legHeight
+            );
+        }
     },
 
     /**
@@ -330,6 +389,32 @@ const Graphics = {
             this.ctx.beginPath();
             this.ctx.arc(cx, cy, r, 0, Math.PI * 2);
             this.ctx.stroke();
+        } else if (this.currentLevel === 6) {
+            // Parachute canopy and lines
+            const canopyWidth = config.width + 24;
+            const canopyHeight = 24;
+            const canopyY = cow.y - config.height / 2 - canopyHeight - 10;
+            const canopyGradient = this.ctx.createLinearGradient(cow.x - canopyWidth / 2, canopyY, cow.x + canopyWidth / 2, canopyY + canopyHeight);
+            canopyGradient.addColorStop(0, '#ffdf5a');
+            canopyGradient.addColorStop(1, '#ff8e53');
+            this.ctx.fillStyle = canopyGradient;
+            this.ctx.beginPath();
+            this.ctx.moveTo(cow.x - canopyWidth / 2, canopyY + canopyHeight);
+            this.ctx.quadraticCurveTo(cow.x, canopyY - canopyHeight * 0.6, cow.x + canopyWidth / 2, canopyY + canopyHeight);
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            // Suspension lines
+            this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            this.ctx.lineWidth = 2;
+            const lineSpacing = canopyWidth / 4;
+            for (let i = -2; i <= 2; i++) {
+                const anchorX = cow.x + (i * lineSpacing * 0.5);
+                this.ctx.beginPath();
+                this.ctx.moveTo(anchorX, canopyY + canopyHeight);
+                this.ctx.lineTo(cow.x - 12 + i * 6, cow.y - config.height / 2);
+                this.ctx.stroke();
+            }
         }
     },
 
@@ -419,6 +504,85 @@ const Graphics = {
             previewCow.innerHTML = '';
             previewCow.appendChild(this.createCowPreview());
         }
+    },
+
+    drawCloudSky() {
+        if (!this.ctx || !this.canvas) return;
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+
+        const gradient = this.ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, '#67c8ff');
+        gradient.addColorStop(0.45, '#8fd6ff');
+        gradient.addColorStop(1, '#f3fbff');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, width, height);
+
+        if (!this.cloudField || this.cloudField.width !== width || this.cloudField.height !== height) {
+            this.cloudField = this.generateCloudField(width, height);
+        }
+
+        for (const layer of this.cloudField.layers) {
+            for (const cloud of layer.clouds) {
+                this.ctx.fillStyle = cloud.color;
+                this.drawEllipse(cloud.x, cloud.y, cloud.radiusX, cloud.radiusY);
+            }
+        }
+    },
+
+    generateCloudField(width, height) {
+        const layers = [];
+        const layerConfigs = [
+            { countFactor: 260, radius: [90, 50], alpha: [0.22, 0.30] },
+            { countFactor: 220, radius: [70, 40], alpha: [0.26, 0.36] },
+            { countFactor: 180, radius: [50, 30], alpha: [0.32, 0.45] }
+        ];
+
+        layerConfigs.forEach((cfg, index) => {
+            const clouds = [];
+            const baseCount = Math.max(4, Math.floor(width / cfg.countFactor));
+            const count = baseCount + index * 2;
+            const verticalBand = height * (0.3 + index * 0.18);
+            for (let i = 0; i < count; i++) {
+                const rand = Math.sin((i + 1) * 43758.5453) * 43758.5453;
+                const rand2 = Math.sin((i + 7) * 12543.3271) * 12543.3271;
+                const randNorm = rand - Math.floor(rand);
+                const randNorm2 = rand2 - Math.floor(rand2);
+                const x = -100 + randNorm * (width + 200);
+                const y = verticalBand + (randNorm2 - 0.5) * (height * 0.18);
+                const radiusX = cfg.radius[0] + randNorm * (cfg.radius[0] * 0.6);
+                const radiusY = cfg.radius[1] + randNorm2 * (cfg.radius[1] * 0.5);
+                const alpha = cfg.alpha[0] + (cfg.alpha[1] - cfg.alpha[0]) * Math.abs(randNorm2);
+                const normalizedAlpha = Math.min(0.9, Math.max(0.15, alpha));
+                clouds.push({
+                    x,
+                    y,
+                    radiusX,
+                    radiusY,
+                    color: `rgba(255,255,255,${normalizedAlpha.toFixed(3)})`
+                });
+            }
+            layers.push({ clouds });
+        });
+
+        return { width, height, layers };
+    },
+
+    drawEllipse(x, y, radiusX, radiusY) {
+        if (!this.ctx) return;
+        if (typeof this.ctx.ellipse === 'function') {
+            this.ctx.beginPath();
+            this.ctx.ellipse(x, y, radiusX, radiusY, 0, 0, Math.PI * 2);
+            this.ctx.fill();
+            return;
+        }
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.translate(x, y);
+        this.ctx.scale(radiusX / radiusY, 1);
+        this.ctx.arc(0, 0, radiusY, 0, Math.PI * 2);
+        this.ctx.restore();
+        this.ctx.fill();
     }
 };
 

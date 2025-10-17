@@ -33,6 +33,19 @@ const GameEngine = {
         powerUp: null
     },
 
+    // Level 6 (plane) skydiver state
+    level6: {
+        waveIntervalMs: 2000,
+        lastWaveAt: 0,
+        waveNumber: 0,
+        baseDropSpeed: 3.8,
+        speedVariance: 1.2,
+        horizontalDrift: 0.6,
+        powerUpIntervalMs: 5000,
+        lastPowerUpAt: 0,
+        powerUp: null
+    },
+
     // Speed boost state for classic chase levels
     speedBoost: {
         intervalMs: 2000,
@@ -127,6 +140,10 @@ const GameEngine = {
                     if (this.currentLevel === 5 && this.level5) {
                         this.level5.lastPowerUpAt = resumeNow;
                     }
+                    if (this.currentLevel === 6 && this.level6) {
+                        this.level6.lastWaveAt = resumeNow;
+                        this.level6.lastPowerUpAt = resumeNow;
+                    }
                     if (this.currentLevel >= 1 && this.currentLevel <= 3 && this.speedBoost) {
                         this.speedBoost.lastSpawnAt = resumeNow;
                     }
@@ -192,13 +209,13 @@ const GameEngine = {
      * L1: default, L2: >=2 games, L3: >=4 games
      */
     computeUnlockedLevel() {
-        // Standalone build unlocks all five levels
-        return 5;
+        // Standalone build unlocks all six levels
+        return 6;
     },
 
     /** Handle selection from the level screen and begin */
     selectLevelAndStart(level) {
-        this.currentLevel = Math.max(1, Math.min(5, Number(level || 1)));
+        this.currentLevel = Math.max(1, Math.min(6, Number(level || 1)));
         this._pendingLevelSelection = false;
         // For level 1 and 2, show a level-specific start screen before beginning
         if (this.currentLevel === 1) {
@@ -221,12 +238,16 @@ const GameEngine = {
             try { if (UI && typeof UI.showScreen === "function") UI.showScreen('level5Start'); } catch (_) {}
             return;
         }
+        if (this.currentLevel === 6) {
+            try { if (UI && typeof UI.showScreen === "function") UI.showScreen('level6Start'); } catch (_) {}
+            return;
+        }
         this.beginGameAtLevel(this.currentLevel);
     },
 
     /** Begin game with a specific level */
     beginGameAtLevel(level) {
-        this.currentLevel = Math.max(1, Math.min(5, Number(level || 1)));
+        this.currentLevel = Math.max(1, Math.min(6, Number(level || 1)));
         const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
         if (this.currentLevel >= 1 && this.currentLevel <= 3 && this.speedBoost) {
@@ -235,6 +256,7 @@ const GameEngine = {
             this.speedBoost.lastSpawnAt = now;
         } else if (this.speedBoost) {
             this.speedBoost.powerUp = null;
+            this.speedBoost.multiplier = 1;
         }
 
         // Inform graphics of the level
@@ -259,6 +281,13 @@ const GameEngine = {
         if (this.currentLevel === 5 && this.level5) {
             this.level5.lastPowerUpAt = now;
             this.level5.powerUp = null;
+            this.laserActiveUntil = 0;
+        }
+        if (this.currentLevel === 6 && this.level6) {
+            this.level6.lastWaveAt = now;
+            this.level6.waveNumber = 0;
+            this.level6.lastPowerUpAt = now;
+            this.level6.powerUp = null;
             this.laserActiveUntil = 0;
         }
 
@@ -300,7 +329,8 @@ const GameEngine = {
             width: GameConfig.cow.width,
             height: GameConfig.cow.height,
             speed: GameConfig.cow.speed,
-            disabledUntil: 0
+            disabledUntil: 0,
+            vx: 0
         });
         this.cows = [];
         if (this.currentLevel === 2) {
@@ -332,6 +362,9 @@ const GameEngine = {
             c2.x = canvasSize.width - margin;
             c2.y = canvasSize.height - margin;
             this.cows.push(c1, c2);
+        } else if (this.currentLevel === 6) {
+            // Falling cows spawn during gameplay; start empty
+            this.cows = [];
         } else {
             const c = baseCow();
             c.x = canvasSize.width * config.cow.x;
@@ -381,6 +414,10 @@ const GameEngine = {
     moveCows(now) {
         if (this.currentLevel === 4) {
             this.updateLevel4Cows();
+            return;
+        }
+        if (this.currentLevel === 6) {
+            this.updateLevel6Cows(now);
             return;
         }
         for (const cow of this.cows) {
@@ -468,6 +505,95 @@ const GameEngine = {
         this.level5.powerUp = { x, y, radius };
     },
 
+    maybeSpawnLevel6Wave(now) {
+        const state = this.level6;
+        if (!state || !this.canvas) return;
+        if (!state.lastWaveAt) state.lastWaveAt = now;
+        if (now - state.lastWaveAt < state.waveIntervalMs) return;
+
+        state.waveNumber += 1;
+        const count = Math.min(5, 2 + Math.floor(Math.max(0, state.waveNumber - 1) / 2));
+        this.spawnLevel6Wave(count);
+        state.lastWaveAt = now;
+    },
+
+    spawnLevel6Wave(count) {
+        if (!this.canvas) return;
+        const state = this.level6;
+        if (!state) return;
+        const cowConfig = GameConfig.cow || { width: 40, height: 40 };
+        const width = this.canvas.width;
+        const halfW = cowConfig.width / 2;
+        const xMin = halfW + 24;
+        const xMax = Math.max(xMin, width - halfW - 24);
+        const positions = [];
+
+        for (let i = 0; i < count; i++) {
+            let x = xMin + Math.random() * Math.max(1, xMax - xMin);
+            let attempts = 0;
+            while (attempts < 6 && positions.some(p => Math.abs(p - x) < cowConfig.width * 1.1)) {
+                x = xMin + Math.random() * Math.max(1, xMax - xMin);
+                attempts += 1;
+            }
+            positions.push(x);
+
+            const verticalSpeed = Math.max(2.6, state.baseDropSpeed + (Math.random() - 0.5) * state.speedVariance);
+            const vx = (Math.random() - 0.5) * (state.horizontalDrift || 0);
+            const cow = {
+                x,
+                y: -cowConfig.height - Math.random() * 80,
+                width: cowConfig.width,
+                height: cowConfig.height,
+                speed: verticalSpeed,
+                disabledUntil: 0,
+                vx
+            };
+            this.cows.push(cow);
+        }
+    },
+
+    updateLevel6Cows(now) {
+        if (!this.canvas) return;
+        const floorY = this.canvas.height + 120;
+        const remaining = [];
+        for (const cow of this.cows) {
+            if (cow.disabledUntil && cow.disabledUntil > now) continue;
+            cow.y += cow.speed;
+            if (cow.vx) {
+                cow.x += cow.vx;
+                if (cow.x < 0) cow.x = 0;
+                if (cow.x > this.canvas.width) cow.x = this.canvas.width;
+            }
+            if (cow.y < floorY) {
+                remaining.push(cow);
+            }
+        }
+        this.cows = remaining;
+    },
+
+    maybeSpawnLevel6PowerUp(now) {
+        const state = this.level6;
+        if (!state || !this.canvas) return;
+        if (!state.lastPowerUpAt) state.lastPowerUpAt = now;
+        if (state.powerUp) return;
+        if (now - state.lastPowerUpAt < state.powerUpIntervalMs) return;
+        state.lastPowerUpAt = now;
+        this.spawnLevel6PowerUp();
+    },
+
+    spawnLevel6PowerUp() {
+        if (!this.canvas || !this.level6) return;
+        const radius = 16;
+        const paddingX = radius + 30;
+        const x = paddingX + Math.random() * Math.max(1, this.canvas.width - paddingX * 2);
+        const halfHeight = this.canvas.height * 0.5;
+        const minY = Math.max(halfHeight + radius, this.canvas.height * 0.55);
+        const maxY = Math.max(minY, this.canvas.height - radius - 24);
+        const range = Math.max(1, maxY - minY);
+        const y = minY + Math.random() * range;
+        this.level6.powerUp = { x, y, radius };
+    },
+
     checkLevel5PowerUpCollision(now) {
         const state = this.level5;
         if (!state || !state.powerUp) return;
@@ -482,8 +608,22 @@ const GameEngine = {
         }
     },
 
-    activateLaser(now) {
-        this.laserActiveUntil = now + 1000;
+    checkLevel6PowerUpCollision(now) {
+        const state = this.level6;
+        if (!state || !state.powerUp) return;
+        const { powerUp } = state;
+        const dx = this.man.x - powerUp.x;
+        const dy = this.man.y - powerUp.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance <= (powerUp.radius + Math.max(this.man.width, this.man.height) / 2)) {
+            this.activateLaser(now, 3000);
+            state.powerUp = null;
+            state.lastPowerUpAt = now;
+        }
+    },
+
+    activateLaser(now, durationMs = 1000) {
+        this.laserActiveUntil = now + durationMs;
     },
 
     isLaserActive(now) {
@@ -565,48 +705,113 @@ const GameEngine = {
         ctx.restore();
     },
 
-    drawLaserEyes(now) {
-        if (this.currentLevel !== 5) return;
-        if (!this.isLaserActive(now)) return;
+    drawLevel6PowerUp() {
+        if (this.currentLevel !== 6) return;
+        const powerUp = this.level6?.powerUp;
+        if (!powerUp) return;
         const ctx = Graphics && Graphics.ctx;
-        const config = GameConfig.man;
-        if (!ctx || !config) return;
+        if (!ctx) return;
         ctx.save();
-        ctx.strokeStyle = 'rgba(255, 0, 0, 0.85)';
-        ctx.lineWidth = 5;
-        ctx.lineCap = 'round';
-        const eyeOffsetX = config.headWidth / 4;
-        const eyeY = this.man.y - config.height / 2 - config.headHeight / 2;
-        const leftEyeX = this.man.x - eyeOffsetX;
-        const rightEyeX = this.man.x + eyeOffsetX;
-        const beamLength = this.canvas ? this.canvas.width : (typeof window !== 'undefined' ? window.innerWidth : 400);
+        const gradient = ctx.createRadialGradient(powerUp.x, powerUp.y, 5, powerUp.x, powerUp.y, powerUp.radius);
+        gradient.addColorStop(0, 'rgba(255,255,255,0.95)');
+        gradient.addColorStop(0.45, '#3de3ff');
+        gradient.addColorStop(1, 'rgba(61, 227, 255, 0.25)');
+        ctx.fillStyle = gradient;
         ctx.beginPath();
-        ctx.moveTo(leftEyeX, eyeY);
-        ctx.lineTo(leftEyeX - beamLength, eyeY - 20);
-        ctx.stroke();
+        ctx.arc(powerUp.x, powerUp.y, powerUp.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(rightEyeX, eyeY);
-        ctx.lineTo(rightEyeX + beamLength, eyeY - 10);
+        ctx.arc(powerUp.x, powerUp.y, powerUp.radius - 4, 0, Math.PI * 2);
         ctx.stroke();
         ctx.restore();
     },
 
-    applyLaserDamage(now) {
-        if (this.currentLevel !== 5) return;
+    drawLaserEyes(now) {
         if (!this.isLaserActive(now)) return;
+        if (this.currentLevel !== 5 && this.currentLevel !== 6) return;
+        const ctx = Graphics && Graphics.ctx;
+        const config = GameConfig.man;
+        if (!ctx || !config) return;
+        ctx.save();
+        const eyeOffsetX = config.headWidth / 4;
+        const eyeY = this.man.y - config.height / 2 - config.headHeight / 2;
+        const leftEyeX = this.man.x - eyeOffsetX;
+        const rightEyeX = this.man.x + eyeOffsetX;
+        if (this.currentLevel === 5) {
+            ctx.strokeStyle = 'rgba(255, 0, 0, 0.85)';
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            const beamLength = this.canvas ? this.canvas.width : (typeof window !== 'undefined' ? window.innerWidth : 400);
+            ctx.beginPath();
+            ctx.moveTo(leftEyeX, eyeY);
+            ctx.lineTo(leftEyeX - beamLength, eyeY - 20);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(rightEyeX, eyeY);
+            ctx.lineTo(rightEyeX + beamLength, eyeY - 10);
+            ctx.stroke();
+        } else if (this.currentLevel === 6) {
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = 'rgba(0, 255, 255, 0.85)';
+            ctx.lineWidth = 6;
+            const topY = 0;
+            ctx.beginPath();
+            ctx.moveTo(leftEyeX, eyeY);
+            ctx.lineTo(leftEyeX, topY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(rightEyeX, eyeY);
+            ctx.lineTo(rightEyeX, topY);
+            ctx.stroke();
+            ctx.strokeStyle = 'rgba(150, 255, 255, 0.35)';
+            ctx.lineWidth = 12;
+            ctx.beginPath();
+            ctx.moveTo(leftEyeX, eyeY);
+            ctx.lineTo(leftEyeX, topY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(rightEyeX, eyeY);
+            ctx.lineTo(rightEyeX, topY);
+            ctx.stroke();
+        }
+        ctx.restore();
+    },
+
+    applyLaserDamage(now) {
+        if (!this.isLaserActive(now)) return;
+        if (this.currentLevel !== 5 && this.currentLevel !== 6) return;
         const config = GameConfig.man;
         if (!config) return;
         const eyeOffsetX = config.headWidth / 4;
         const eyeY = this.man.y - config.height / 2 - config.headHeight / 2;
+        if (this.currentLevel === 5) {
+            for (const cow of this.cows) {
+                if (cow.disabledUntil && cow.disabledUntil > now) continue;
+                if (cow.disabledUntil && cow.disabledUntil <= now) cow.disabledUntil = 0;
+                const dy = Math.abs(cow.y - eyeY);
+                const verticalHit = dy <= (cow.height / 2 + 18);
+                if (!verticalHit) continue;
+                if (cow.x < this.man.x - eyeOffsetX) {
+                    this.disableCow(cow, now);
+                } else if (cow.x > this.man.x + eyeOffsetX) {
+                    this.disableCow(cow, now);
+                }
+            }
+            return;
+        }
+
+        const leftEyeX = this.man.x - eyeOffsetX;
+        const rightEyeX = this.man.x + eyeOffsetX;
+        const beamHalfWidth = Math.max(10, config.headWidth / 3);
         for (const cow of this.cows) {
             if (cow.disabledUntil && cow.disabledUntil > now) continue;
             if (cow.disabledUntil && cow.disabledUntil <= now) cow.disabledUntil = 0;
-            const dy = Math.abs(cow.y - eyeY);
-            const verticalHit = dy <= (cow.height / 2 + 18);
-            if (!verticalHit) continue;
-            if (cow.x < this.man.x - eyeOffsetX) {
-                this.disableCow(cow, now);
-            } else if (cow.x > this.man.x + eyeOffsetX) {
+            if (cow.y > this.man.y) continue;
+            const leftHit = Math.abs(cow.x - leftEyeX) <= (cow.width / 2 + beamHalfWidth);
+            const rightHit = Math.abs(cow.x - rightEyeX) <= (cow.width / 2 + beamHalfWidth);
+            if (leftHit || rightHit) {
                 this.disableCow(cow, now);
             }
         }
@@ -635,7 +840,7 @@ const GameEngine = {
             const dy = this.man.y - cow.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             if (distance < (this.man.width / 2 + cow.width / 2)) {
-                if (this.currentLevel === 5 && this.isLaserActive(now)) {
+                if ((this.currentLevel === 5 || this.currentLevel === 6) && this.isLaserActive(now)) {
                     this.disableCow(cow, now);
                     continue;
                 }
@@ -654,6 +859,12 @@ const GameEngine = {
         this.laserActiveUntil = 0;
         if (this.level5) {
             this.level5.powerUp = null;
+        }
+        if (this.level6) {
+            this.level6.powerUp = null;
+            this.level6.waveNumber = 0;
+            this.level6.lastWaveAt = 0;
+            this.level6.lastPowerUpAt = 0;
         }
         if (this.speedBoost) {
             this.speedBoost.powerUp = null;
@@ -724,6 +935,12 @@ const GameEngine = {
         if (this.level5) {
             this.level5.powerUp = null;
         }
+        if (this.level6) {
+            this.level6.powerUp = null;
+            this.level6.waveNumber = 0;
+            this.level6.lastWaveAt = 0;
+            this.level6.lastPowerUpAt = 0;
+        }
         if (this.speedBoost) {
             this.speedBoost.powerUp = null;
             this.speedBoost.multiplier = 1;
@@ -742,6 +959,9 @@ const GameEngine = {
         const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
         if (this.currentLevel === 4) {
             this.maybeSpawnLevel4Wave(now);
+        } else if (this.currentLevel === 6) {
+            this.maybeSpawnLevel6Wave(now);
+            this.maybeSpawnLevel6PowerUp(now);
         } else {
             const elapsedSinceLast = now - this.speedScaling.lastIncreaseAt;
             if (elapsedSinceLast >= this.speedScaling.intervalMs) {
@@ -778,12 +998,15 @@ const GameEngine = {
         if (this.currentLevel === 5) {
             this.drawLevel5PowerUp();
         }
+        if (this.currentLevel === 6) {
+            this.drawLevel6PowerUp();
+        }
         if (this.currentLevel >= 1 && this.currentLevel <= 3) {
             this.drawSpeedBoostPowerUp();
         }
 
         // Debug HUD: show first cow speed (temporary to verify scaling)
-        if (this.currentLevel !== 4 && this.currentLevel !== 5) {
+        if (this.currentLevel !== 4 && this.currentLevel !== 5 && this.currentLevel !== 6) {
             try {
                 const ctx = Graphics && Graphics.ctx;
                 if (ctx) {
@@ -801,6 +1024,11 @@ const GameEngine = {
         this.moveMan();
         if (this.currentLevel === 5) {
             this.checkLevel5PowerUpCollision(now);
+        }
+        if (this.currentLevel === 6) {
+            this.checkLevel6PowerUpCollision(now);
+        }
+        if (this.currentLevel === 5 || this.currentLevel === 6) {
             this.applyLaserDamage(now);
         }
         if (this.currentLevel >= 1 && this.currentLevel <= 3) {
@@ -861,6 +1089,10 @@ const GameEngine = {
             }
             if (this.currentLevel === 5 && this.level5) {
                 this.level5.lastPowerUpAt = resumeNow;
+            }
+            if (this.currentLevel === 6 && this.level6) {
+                this.level6.lastWaveAt = resumeNow;
+                this.level6.lastPowerUpAt = resumeNow;
             }
             if (this.currentLevel >= 1 && this.currentLevel <= 3 && this.speedBoost) {
                 this.speedBoost.lastSpawnAt = resumeNow;
