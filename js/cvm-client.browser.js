@@ -6,6 +6,14 @@ const RELAYS = [
   // "wss://relay.contextvm.org",
   "wss://cvm.otherstuff.ai",
 ];
+const LEADERBOARD_ENABLED = false;
+
+function disableLeaderboardUI() {
+  const container = document.getElementById("leaderboard");
+  if (container) {
+    container.style.display = "none";
+  }
+}
 
 async function loadDeps() {
   const [{ Client }, sdk] = await Promise.all([
@@ -378,6 +386,10 @@ async function fetchPlayerStatsWithPlayerKey() {
 }
 
 async function fetchLeaderboardWithPlayerKey() {
+  if (!LEADERBOARD_ENABLED) {
+    disableLeaderboardUI();
+    return;
+  }
   try {
     // Ensure UI and show spinner
     ensureLeaderboardUI();
@@ -622,7 +634,11 @@ async function submitLeaderboardEntry({
 function runOnLoad() {
   // Slight defer to allow nostr.js to finish initial session creation
   setTimeout(() => {
-    fetchLeaderboardWithPlayerKey();
+    if (LEADERBOARD_ENABLED) {
+      fetchLeaderboardWithPlayerKey();
+    } else {
+      disableLeaderboardUI();
+    }
     fetchPlayerStatsWithPlayerKey();
   }, 0);
 }

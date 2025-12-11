@@ -206,11 +206,22 @@ const GameEngine = {
 
     /**
      * Compute highest unlocked level based on games played
-     * L1: default, L2: >=2 games, L3: >=4 games
      */
     computeUnlockedLevel() {
-        // Standalone build unlocks all six levels
-        return 6;
+        let gamesPlayed = 0;
+        try {
+            const p = window.getPlayer ? window.getPlayer() : null;
+            const localGames = Number(p?.games_played || 0);
+            if (Number.isFinite(localGames) && localGames > gamesPlayed) gamesPlayed = localGames;
+        } catch (_) {}
+        try {
+            const sp = window._serverPlayer || null;
+            const serverGames = Number((sp && (sp.games_played ?? sp.played)) || 0);
+            if (Number.isFinite(serverGames) && serverGames > gamesPlayed) gamesPlayed = serverGames;
+        } catch (_) {}
+        if (gamesPlayed >= 2) return 6; // third go: all levels
+        if (gamesPlayed >= 1) return 4; // second go: levels 1-4
+        return 2; // first go: levels 1-2
     },
 
     /** Handle selection from the level screen and begin */

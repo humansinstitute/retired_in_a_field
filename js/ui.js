@@ -167,40 +167,14 @@ const UI = {
      */
     setupEventListeners() {
         if (this.buttons.start) {
-            this.buttons.start.addEventListener('click', async () => {
-                // Guard: require a token-ish value (basic UI check), then verify via cashu_access
-                const token = (this.inputs.cashuToken?.value || '').trim();
-                const valid = this.validateCashuToken(token);
-                if (!valid) {
-                    this.showCashuError(true);
-                    return;
-                }
-                // Create a refId for idempotency if available
-                let startRefId = null;
-                try { startRefId = (typeof window.generateRefId === 'function') ? window.generateRefId() : null; } catch (_) { startRefId = null; }
-                this.setButtonLoading('start', true);
-                try {
-                    const res = (window.redeemCashuAccess)
-                        ? await window.redeemCashuAccess(token, 21, startRefId)
-                        : { decision: 'ACCESS_DENIED', amount: 0, reason: 'cashu_access unavailable', mode: 'error' };
-                    if (res && res.decision === 'ACCESS_GRANTED') {
-                        // Save token locally and record pledged amount for this session
-                        try { localStorage.setItem('cashuToken', token); } catch (_) {}
-                        try {
-                            const amt = Number(res.amount);
-                            if (Number.isFinite(amt) && amt > 0) {
-                                if (window.updatePlayer) window.updatePlayer({ last_pledge: amt });
-                            }
-                        } catch (_) {}
-                        if (this.onStartGame) this.onStartGame();
-                    } else {
-                        const reason = res && res.reason ? String(res.reason) : 'unknown';
-                        this.showToast(`Minimum to play is 21 sats. ${reason}`);
-                    }
-                } catch (e) {
-                    this.showToast(`Minimum to play is 21 sats. ${String(e && e.message ? e.message : e)}`);
-                } finally {
-                    this.setButtonLoading('start', false);
+            this.buttons.start.addEventListener('click', () => {
+                // Free-play: no token required
+                this.setButtonEnabled('start', true); // make sure it's not stuck disabled
+                if (this.onStartGame) {
+                    this.onStartGame();
+                } else if (window.GameEngine && typeof window.GameEngine.startGame === 'function') {
+                    // Fallback in case callbacks were not wired yet
+                    window.GameEngine.startGame();
                 }
             });
         }
